@@ -2,7 +2,11 @@
 // Läuft nur bei GitHub Actions, nicht in der App.
 import webpush from 'web-push';
 
-const { VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, PUSH_SUBSCRIPTION, FORCE } = process.env;
+const env = k => (process.env[k] || '').trim();
+const VAPID_PUBLIC_KEY = env('VAPID_PUBLIC_KEY');
+const VAPID_PRIVATE_KEY = env('VAPID_PRIVATE_KEY');
+const PUSH_SUBSCRIPTION = env('PUSH_SUBSCRIPTION');
+const FORCE = env('FORCE');
 
 // Nur der Lauf, der in Deutschland 7 Uhr trifft, sendet (Sommer- und Winterzeit)
 const hour = Number(new Intl.DateTimeFormat('de-DE', { timeZone: 'Europe/Berlin', hour: '2-digit', hourCycle: 'h23' }).format(new Date()));
