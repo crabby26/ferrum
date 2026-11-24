@@ -175,6 +175,90 @@ const Progress = {
     </div>`;
   },
 
+  /* ---------- Wochen-Check-in (sonntags) ---------- */
+  weekStats() {
+    const end = U.today(), start = U.addDays(end, -6);
+    const ws = S.workouts.filter(w => w.date >= start && w.date <= end);
+    let planned = null;
+    if (Train.schedule()) {
+      planned = 0;
+      for (let i = 0; i < 7; i++) { const p = Train.plannedFor(U.addDays(start, i)); if (p && p !== 'rest') planned++; }
+    }
+    const byDay = {};
+    S.entries.filter(e => e.date >= start && e.date <= end).forEach(e => {
+      const v = Nutri.calc(e.food, e.grams);
+      const d = byDay[e.date] || (byDay[e.date] = { kcal: 0, p: 0 });
+      d.kcal += v.kcal; d.p += v.p;
+    });
+    const days = Object.values(byDay);
+    const tr = Progress.trendSeries();
+    const tNow = tr.length ? Progress.trendAt(tr, end) : null;
+    const tThen = tr.length ? Progress.trendAt(tr, U.addDays(end, -7)) : null;
+    return {
+      workouts: ws.length, planned,
+      sets: ws.reduce((a, w) => a + Train.setCount(w), 0),
+      prs: ws.reduce((a, w) => a + Train.prCount(w), 0),
+      logged: days.length,
+      kcal: days.length ? days.reduce((a, d) => a + d.kcal, 0) / days.length : 0,
+      prot: days.length ? days.reduce((a, d) => a + d.p, 0) / days.length : 0,
+      weightNow: tNow, weightDiff: tNow != null && tThen != null && tr.length > 1 ? tNow - tThen : null
+    };
+  },
+  checkin() {
+    const st = S.settings;
+    const w = Progress.weekStats();
+    const ex = Progress.expenditure();
+    const pct = (v, g) => g ? Math.round(v / g * 100) : 0;
+    let advice = '';
+    if (w.weightDiff != null) {
+      const d = w.weightDiff;
+      if (st.goal === 'bulk') advice = d < 0.05 ? 'Dein Gewicht steigt kaum. Für Muskelaufbau etwas mehr essen.' : d > 0.5 ? 'Du nimmst schnell zu. Etwas weniger essen hält den Aufbau sauber.' : 'Gutes Aufbau-Tempo, weiter so.';
+      else if (st.goal === 'cut') advice = d > -0.2 ? 'Die Diät stockt. Ein paar Kalorien weniger oder mehr Bewegung.' : d < -1 ? 'Du nimmst sehr schnell ab. Etwas mehr essen schützt deine Kraft.' : 'Gutes Diät-Tempo, weiter so.';
+      else advice = Math.abs(d) < 0.3 ? 'Dein Gewicht ist stabil.' : 'Dein Gewicht bewegt sich. Prüfe deine Kalorien.';
+    }
+    let goalBtn = '';
+    if (ex.tdee) {
+      const g = calcGoals(Object.assign({}, st, { weight: Progress.latestWeight() || st.weight, tdeeOverride: ex.tdee }));
+      if (Math.abs(g.kcal - st.kcal) >= 50) goalBtn = `<button class="btn primary block" data-act="tdee-apply" data-v="${ex.tdee}" style="margin-top:12px">Kalorienziel auf ${U.n(g.kcal)} kcal anpassen</button>`;
+    }
+    const sh = U.sheet({
+      title: 'Wochen-Check-in',
+      full: true,
+      body: `<p class="hint" style="margin:-2px 2px 14px">Die letzten 7 Tage, ${U.fmtShort(U.addDays(U.today(), -6))} bis ${U.fmtShort(U.today())}</p>
+        <div class="card">
+          <div class="card-title">Training</div>
+          <div class="kpi-row">
+            <div class="kpi"><b>${w.workouts}${w.planned != null ? ' / ' + w.planned : ''}</b><span>Workouts${w.planned != null ? ' (geplant)' : ''}</span></div>
+            <div class="kpi"><b>${w.sets}</b><span>Arbeitssätze, ${w.prs} ${w.prs === 1 ? 'Rekord' : 'Rekorde'}</span></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Ernährung</div>
+          <div class="kpi-row">
+            <div class="kpi"><b>${w.logged ? U.n(w.kcal) : '–'}</b><span>Ø kcal (${pct(w.kcal, st.kcal)} % vom Ziel)</span></div>
+            <div class="kpi"><b>${w.logged ? U.n(w.prot) + ' g' : '–'}</b><span>Ø Protein (${pct(w.prot, st.protein)} %)</span></div>
+          </div>
+          <p class="hint" style="margin:0">${w.logged} von 7 Tagen eingetragen.</p>
+        </div>
+        <div class="card">
+          <div class="card-title">Gewicht & Verbrauch</div>
+          <div class="kpi-row">
+            <div class="kpi"><b>${w.weightNow != null ? U.n(w.weightNow, 1) + ' kg' : '–'}</b><span>Trendgewicht</span></div>
+            <div class="kpi"><b>${w.weightDiff != null ? (w.weightDiff > 0 ? '+' : '') + U.n(w.weightDiff, 2) + ' kg' : '–'}</b><span>diese Woche</span></div>
+          </div>
+          ${ex.tdee ? `<p class="hint" style="margin:0">Dein echter Verbrauch: ${U.n(ex.tdee)} kcal pro Tag.</p>` : '<p class="hint" style="margin:0">Für die Verbrauchsberechnung brauchst du 2 Wochen Gewichts- und Essensdaten.</p>'}
+          ${advice ? `<p style="margin:10px 0 0;font-weight:500">${advice}</p>` : ''}
+          ${goalBtn}
+        </div>
+        <button class="btn block" data-close2 style="margin-top:4px">Fertig</button>`
+    });
+    sh.$('[data-close2]').onclick = () => sh.close();
+    sh.body.addEventListener('click', e => { if (e.target.closest('[data-act=tdee-apply]')) setTimeout(() => sh.close(), 50); });
+    S.meta.lastCheckin = U.today();
+    Store.saveKV('meta');
+    App.refresh();
+  },
+
   weekly(n = 8) {
     const out = [];
     const cur = U.weekStart(U.today());

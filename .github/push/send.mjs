@@ -1,19 +1,42 @@
-// Ferrum – sendet das Morgen-Signal per Web-Push.
+// Ferrum – sendet Mitteilungs-Signale per Web-Push.
 // Läuft nur bei GitHub Actions, nicht in der App.
+//   weigh   – 7 Uhr      Erinnerung zum Wiegen
+//   day     – 8 Uhr      heutiger Trainingstag + Tagesziele
+//   checkin – So 18 Uhr  Wochen-Check-in
 import webpush from 'web-push';
 
 const env = k => (process.env[k] || '').trim();
 const VAPID_PUBLIC_KEY = env('VAPID_PUBLIC_KEY');
 const VAPID_PRIVATE_KEY = env('VAPID_PRIVATE_KEY');
 const PUSH_SUBSCRIPTION = env('PUSH_SUBSCRIPTION');
-const FORCE = env('FORCE');
+const SCHEDULE = env('SCHEDULE');       // z. B. "0 6 * * *" bei geplanten Läufen
+const MANUAL_TYPE = env('MANUAL_TYPE'); // bei „Run workflow“
 
-// Nur der Lauf, der in Deutschland 7 Uhr trifft, sendet (Sommer- und Winterzeit)
-const hour = Number(new Intl.DateTimeFormat('de-DE', { timeZone: 'Europe/Berlin', hour: '2-digit', hourCycle: 'h23' }).format(new Date()));
-if (FORCE !== 'true' && hour !== 7) {
-  console.log(`In Deutschland ist es gerade ${hour} Uhr – gesendet wird nur um 7 Uhr.`);
-  process.exit(0);
+// Abstand Berlin ↔ UTC heute (1 Std. Winter, 2 Std. Sommer)
+function berlinOffset(d = new Date()) {
+  const h = Number(new Intl.DateTimeFormat('de-DE', { timeZone: 'Europe/Berlin', hour: '2-digit', hourCycle: 'h23' }).format(d));
+  return ((h - d.getUTCHours()) + 24) % 24;
 }
+const berlinWeekday = new Intl.DateTimeFormat('en-US', { timeZone: 'Europe/Berlin', weekday: 'short' }).format(new Date());
+
+let type = null;
+if (MANUAL_TYPE) {
+  type = MANUAL_TYPE;
+} else if (SCHEDULE) {
+  // Gemeint ist die Uhrzeit, für die der Lauf geplant war (auch wenn GitHub verspätet startet)
+  const utcHour = Number(SCHEDULE.split(/\s+/)[1]);
+  const hour = (utcHour + berlinOffset()) % 24;
+  if (hour === 7) type = 'weigh';
+  else if (hour === 8) type = 'day';
+  else if (hour === 18 && berlinWeekday === 'Sun') type = 'checkin';
+  if (!type) {
+    console.log(`Dieser Lauf entspricht ${hour} Uhr in Deutschland – dafür gibt es keine Mitteilung.`);
+    process.exit(0);
+  }
+} else {
+  type = 'day';
+}
+console.log(`Mitteilung: ${type}`);
 
 if (!VAPID_PRIVATE_KEY) {
   console.log('::notice::Secret VAPID_PRIVATE_KEY fehlt noch – nichts gesendet.');
@@ -38,7 +61,7 @@ webpush.setVapidDetails('https://crabby26.github.io/ferrum/', VAPID_PUBLIC_KEY, 
 let ok = 0;
 for (const sub of subs) {
   try {
-    await webpush.sendNotification(sub, JSON.stringify({ type: 'morning' }), { TTL: 3 * 3600, urgency: 'normal' });
+    await webpush.sendNotification(sub, JSON.stringify({ type }), { TTL: 3 * 3600, urgency: 'normal' });
     ok++;
   } catch (e) {
     if (e.statusCode === 404 || e.statusCode === 410) {

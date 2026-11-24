@@ -20,16 +20,83 @@ const Train = {
     return r === 1 ? w : w * (1 + r / 30);
   },
   workoutsSorted() { return S.workouts.slice().sort((a, b) => b.start - a.start); },
+
+  /* Satztypen wie in Hevy: n = normal, w = Aufwärmen, d = Drop-Satz, f = bis zum Versagen.
+     Aufwärmsätze zählen nicht für Rekorde, Volumen und „Letztes Mal“. */
+  SET_TYPES: { n: 'Normaler Satz', w: 'Aufwärmsatz', d: 'Drop-Satz', f: 'Bis zum Versagen' },
+  isWarm(s) { return s && s.t === 'w'; },
+  working(sets) { return (sets || []).filter(s => s.t !== 'w'); },
+  // Position eines Satzes unter seinesgleichen (Aufwärm- bzw. Arbeitssätze)
+  sameKindIndex(sets, si) {
+    const warm = Train.isWarm(sets[si]);
+    let n = 0;
+    for (let k = 0; k < si; k++) if (Train.isWarm(sets[k]) === warm) n++;
+    return n;
+  },
+  setLabel(sets, si) {
+    const s = sets[si];
+    if (s.t === 'w') return 'W';
+    if (s.t === 'd') return 'D';
+    if (s.t === 'f') return 'F';
+    return String(Train.sameKindIndex(sets, si) + 1);
+  },
+
   history(exId) {
     const out = [];
     Train.workoutsSorted().forEach(w => {
-      w.exercises.forEach(x => { if (x.exId === exId && x.sets.length) out.push({ w, sets: x.sets }); });
+      w.exercises.forEach(x => {
+        if (x.exId !== exId) return;
+        const work = Train.working(x.sets);
+        if (work.length) out.push({ w, sets: work, all: x.sets });
+      });
     });
     return out;
   },
   lastSets(exId) {
     const h = Train.history(exId);
     return h.length ? h[0].sets : [];
+  },
+  lastWarmups(exId) {
+    const h = Train.history(exId);
+    return h.length ? h[0].all.filter(s => s.t === 'w') : [];
+  },
+
+  /* ---------- Steigerungs-Vorschlag (Double Progression) ----------
+     Hast du beim letzten Mal in allen Arbeitssätzen das obere Ende des
+     Wiederholungsbereichs geschafft → mehr Gewicht, wieder unten anfangen.
+     Sonst → gleiches Gewicht, eine Wiederholung mehr. */
+  parseRange(reps) {
+    const m = String(reps || '').match(/(\d+)\s*(?:-|–|bis)\s*(\d+)/);
+    if (m) return { lo: +m[1], hi: +m[2] };
+    const one = String(reps || '').match(/^\s*(\d+)\s*$/);
+    return one ? { lo: +one[1], hi: +one[1] } : null;
+  },
+  step(w) { return w >= 20 ? 2.5 : 1; },
+  suggest(ex, si) {
+    if (S.settings.overload === false) return null;
+    const s = ex.sets[si];
+    if (!s || Train.isWarm(s)) return null;
+    const last = Train.lastSets(ex.exId);
+    if (!last.length) return null;
+    const prev = last[Train.sameKindIndex(ex.sets, si)] || last[last.length - 1];
+    const range = Train.parseRange(ex.reps);
+    const allTop = range && last.every(x => (+x.r || 0) >= range.hi);
+    const w = +prev.w || 0;
+    if (w > 0 && allTop) return { w: Math.round((w + Train.step(w)) * 100) / 100, r: range.lo, up: true };
+    const r = range ? Math.min((+prev.r || 0) + 1, Math.max(range.hi, (+prev.r || 0))) : (+prev.r || 0) + 1;
+    return { w, r: Math.max(1, r), up: false };
+  },
+  suggestText(ex) {
+    if (S.settings.overload === false) return '';
+    const last = Train.lastSets(ex.exId);
+    if (!last.length) return '';
+    const i = ex.sets.findIndex(s => !Train.isWarm(s));
+    if (i < 0) return '';
+    const sg = Train.suggest(ex, i);
+    if (!sg) return '';
+    return sg.up
+      ? `Steigern: ${U.n(sg.w, 2)} kg × ${sg.r}`
+      : sg.w > 0 ? `Heute: ${U.n(sg.w, 2)} kg, 1 Wdh. mehr` : `Heute: 1 Wdh. mehr`;
   },
   best(exId) {
     const b = { e1rm: 0, maxW: 0, reps0: 0, count: 0, bestSet: null };
@@ -51,13 +118,14 @@ const Train = {
   },
   volume(w) {
     let v = 0;
-    w.exercises.forEach(x => x.sets.forEach(s => { v += (+s.w || 0) * (+s.r || 0); }));
+    w.exercises.forEach(x => Train.working(x.sets).forEach(s => { v += (+s.w || 0) * (+s.r || 0); }));
     return v;
   },
-  setCount(w) { return w.exercises.reduce((a, x) => a + x.sets.length, 0); },
+  setCount(w) { return w.exercises.reduce((a, x) => a + Train.working(x.sets).length, 0); },
   prCount(w) { return w.exercises.reduce((a, x) => a + x.sets.filter(s => s.pr).length, 0); },
 
-  nextTemplate() {
+  // Rotation: nach dem zuletzt trainierten Tag kommt der nächste
+  rotationNext() {
     const t = Train.tpls();
     if (!t.length) return null;
     const last = Train.workoutsSorted().find(w => w.templateId && t.some(x => x.id === w.templateId));
@@ -66,10 +134,63 @@ const Train = {
     return t[(i + 1) % t.length];
   },
 
+  /* ---------- Wochenplan ----------
+     settings.schedule = { on: true/false, days: { 0..6: Vorlagen-ID oder 'rest' } } (0 = Sonntag) */
+  WD_LONG: ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'],
+  WEEK_ORDER: [1, 2, 3, 4, 5, 6, 0],
+  schedule() { const s = S.settings.schedule; return s && s.on ? s : null; },
+  plannedFor(key) {
+    const sch = Train.schedule();
+    if (!sch) return null;
+    const id = sch.days[U.parseKey(key).getDay()];
+    return (id && id !== 'rest' && S.templates.find(t => t.id === id)) || 'rest';
+  },
+  nextTrainingDay(fromKey) {
+    for (let i = 1; i <= 7; i++) {
+      const k = U.addDays(fromKey || U.today(), i);
+      const p = Train.plannedFor(k);
+      if (p && p !== 'rest') return { key: k, tpl: p, inDays: i };
+    }
+    return null;
+  },
+  // Was steht heute an? { tpl } oder { rest: true, next }
+  todayInfo() {
+    if (!Train.schedule()) return { mode: 'rotation', tpl: Train.rotationNext() };
+    const p = Train.plannedFor(U.today());
+    if (p === 'rest') return { mode: 'week', rest: true, next: Train.nextTrainingDay() };
+    return { mode: 'week', tpl: p };
+  },
+  nextTemplate() {
+    const info = Train.todayInfo();
+    if (info.tpl) return info.tpl;
+    return info.next ? info.next.tpl : Train.rotationNext();
+  },
+  // Vorschlag: Trainingstage gleichmäßig über die Woche (Montag zuerst)
+  defaultWeek(ids, key) {
+    const R = 'rest';
+    const n = ids.length;
+    let pattern;
+    if (key === 'fullbody') pattern = [0, R, 1, R, 2, R, R];
+    else if (n === 1) pattern = [0, R, 0, R, 0, R, R];
+    else if (n === 2) pattern = [0, 1, R, 0, 1, R, R];
+    else if (n === 3) pattern = [0, 1, 2, 0, 1, 2, R];
+    else if (n === 4) pattern = [0, 1, R, 2, 3, R, R];
+    else if (n === 5) pattern = [0, 1, 2, 3, 4, R, R];
+    else pattern = [0, 1, 2, 3, 4, 5, R];
+    const days = {};
+    Train.WEEK_ORDER.forEach((wd, i) => { const p = pattern[i]; days[wd] = p === R || ids[p] == null ? R : ids[p]; });
+    return days;
+  },
+  restText(info) {
+    if (!info.next) return 'Kein Trainingstag geplant.';
+    return info.next.inDays === 1 ? `Morgen: ${info.next.tpl.name}` : `${Train.WD_LONG[U.parseKey(info.next.key).getDay()]}: ${info.next.tpl.name}`;
+  },
+
   /* ---------- Ansicht ---------- */
   render() {
     const el = $('#view-train');
-    const next = Train.nextTemplate();
+    const info = Train.todayInfo();
+    const next = info.tpl || null;
     const ws = Train.workoutsSorted();
     const weekStart = U.weekStart(U.today());
     const thisWeek = ws.filter(w => w.date >= weekStart).length;
@@ -83,9 +204,19 @@ const Train = {
         <div class="ex-list">Seit ${U.fmtMin(Date.now() - S.active.start)}, ${S.active.exercises.reduce((a, x) => a + x.sets.filter(s => s.done).length, 0)} Sätze erledigt</div>
         <button class="btn primary block" data-act="open-workout">Weiter trainieren</button>
       </div>`;
+    } else if (info.rest) {
+      hero = `<div class="next-card">
+        <div class="eyebrow">Heute, ${Train.WD_LONG[new Date().getDay()]}</div>
+        <h2>Ruhetag 😌</h2>
+        <div class="ex-list">${U.esc(Train.restText(info))}. Erholung gehört zum Muskelaufbau.</div>
+        <div class="chips">
+          ${tpls.map(t => `<button class="chip" data-act="start" data-id="${t.id}">${U.esc(t.name)}</button>`).join('')}
+          <button class="chip" data-act="start" data-id="">Freies Workout</button>
+        </div>
+      </div>`;
     } else if (next) {
       hero = `<div class="next-card">
-        <div class="eyebrow">Als Nächstes in deiner Rotation</div>
+        <div class="eyebrow">${info.mode === 'week' ? 'Heute, ' + Train.WD_LONG[new Date().getDay()] : 'Als Nächstes in deiner Rotation'}</div>
         <h2>${U.esc(next.name)}</h2>
         <div class="ex-list">${next.exercises.map(x => U.esc(Train.exName(x.exId))).join(', ') || 'Noch keine Übungen'}</div>
         <button class="btn primary block" data-act="start" data-id="${next.id}">${U.icon.play} ${U.esc(next.name)} starten</button>
@@ -115,8 +246,8 @@ const Train = {
         </div>`).join('') || '<div class="empty">Noch keine Vorlagen.</div>'}
       </div>
       <button class="list-item list" data-act="split-pick" style="border-radius:var(--r-md)">
-        <div class="li-main"><div class="li-title">Fertigen Split wählen</div>
-        <div class="li-sub">${S.meta.split && SPLITS.some(s => s.key === S.meta.split) ? 'Aktuell: ' + U.esc(SPLITS.find(s => s.key === S.meta.split).name) : 'PPL, Arnold, Upper/Lower, Ganzkörper …'}</div></div>${U.icon.chevron}
+        <div class="li-main"><div class="li-title">Split & Wochenplan</div>
+        <div class="li-sub">${S.meta.split && SPLITS.some(s => s.key === S.meta.split) ? U.esc(SPLITS.find(s => s.key === S.meta.split).name) : 'Split wählen'}${Train.schedule() ? ', feste Trainingstage' : ', Rotation'}</div></div>${U.icon.chevron}
       </button>
       <div class="section-title">Übungen <button class="link" data-act="ex-new">Neue Übung</button></div>
       <button class="list-item list" data-act="ex-browse" style="border-radius:var(--r-md)">
@@ -194,12 +325,23 @@ const Train = {
   },
   isOpen() { return $('#workout-screen').classList.contains('open'); },
 
+  // Vorbelegung eines Satzes: Vorschlag > letztes Mal > vorheriger Satz
   placeholder(ex, si) {
+    const s = ex.sets[si];
+    const warm = Train.isWarm(s);
+    const idx = Train.sameKindIndex(ex.sets, si);
+    if (warm) {
+      const lw = Train.lastWarmups(ex.exId);
+      if (lw[idx]) return { w: lw[idx].w, r: lw[idx].r };
+      return null;
+    }
+    const sg = Train.suggest(ex, si);
+    if (sg) return { w: sg.w, r: sg.r, sug: true };
     const last = Train.lastSets(ex.exId);
-    if (last[si]) return { w: last[si].w, r: last[si].r };
+    if (last[idx]) return { w: last[idx].w, r: last[idx].r };
     for (let k = si - 1; k >= 0; k--) {
       const prev = ex.sets[k];
-      if (prev.w != null || prev.r != null) return { w: prev.w, r: prev.r };
+      if (!Train.isWarm(prev) && (prev.w != null || prev.r != null)) return { w: prev.w, r: prev.r };
     }
     if (last.length) return { w: last[last.length - 1].w, r: last[last.length - 1].r };
     return null;
@@ -208,23 +350,30 @@ const Train = {
   exCard(ei) {
     const a = S.active, ex = a.exercises[ei];
     const last = Train.lastSets(ex.exId);
-    const target = ex.reps ? `Ziel: ${ex.sets.length} × ${U.esc(ex.reps)} Wdh.` : `${ex.sets.length} Sätze`;
+    const lastW = Train.lastWarmups(ex.exId);
+    const nWork = Train.working(ex.sets).length;
+    const target = ex.reps ? `Ziel: ${nWork} × ${U.esc(ex.reps)} Wdh.` : `${nWork} Sätze`;
+    const tip = Train.suggestText(ex);
     const rows = ex.sets.map((s, si) => {
       const ph = Train.placeholder(ex, si) || {};
-      const prev = last[si] ? Train.setStr(last[si]) : '–';
-      return `<div class="set-grid set-row ${s.done ? 'done' : ''}" data-row="${ei}-${si}">
-        <div class="set-no">${si + 1}${s.pr ? '<span class="pr-badge">PR</span>' : ''}</div>
+      const idx = Train.sameKindIndex(ex.sets, si);
+      const lp = Train.isWarm(s) ? lastW[idx] : last[idx];
+      const prev = lp ? Train.setStr(lp) : '–';
+      const type = s.t && s.t !== 'n' ? s.t : 'n';
+      return `<div class="set-grid set-row ${s.done ? 'done' : ''} ${type !== 'n' ? 'type-' + type : ''}" data-row="${ei}-${si}">
+        <button class="set-no st-${type}" data-act="set-type" data-ei="${ei}" data-si="${si}" aria-label="Satztyp ändern">${Train.setLabel(ex.sets, si)}${s.pr ? '<span class="pr-badge">PR</span>' : ''}</button>
         <div class="set-prev">${prev}</div>
-        <input class="set-in" data-ei="${ei}" data-si="${si}" data-k="w" inputmode="decimal" autocomplete="off"
+        <input class="set-in ${ph.sug ? 'sug' : ''}" data-ei="${ei}" data-si="${si}" data-k="w" inputmode="decimal" autocomplete="off"
           value="${s.w != null ? U.n(s.w, 2).replace(/\./g, '') : ''}" placeholder="${ph.w != null ? U.n(ph.w, 2).replace(/\./g, '') : 'kg'}">
-        <input class="set-in" data-ei="${ei}" data-si="${si}" data-k="r" inputmode="numeric" pattern="[0-9]*" autocomplete="off"
+        <input class="set-in ${ph.sug ? 'sug' : ''}" data-ei="${ei}" data-si="${si}" data-k="r" inputmode="numeric" pattern="[0-9]*" autocomplete="off"
           value="${s.r != null ? s.r : ''}" placeholder="${ph.r != null ? ph.r : 'Wdh'}">
         <button class="set-check" data-act="set-done" data-ei="${ei}" data-si="${si}" aria-label="Satz erledigt">${U.icon.check}</button>
       </div>`;
     }).join('');
     return `<div class="ex-card" data-card="${ei}">
       <div class="ex-head">
-        <div class="t"><b>${U.esc(ex.name)}</b><span>${target}${last.length ? '' : ', erstes Mal'}</span></div>
+        <div class="t"><b>${U.esc(ex.name)}</b><span>${target}${last.length ? '' : ', erstes Mal'}</span>
+          ${tip ? `<span class="sug-tip">${U.esc(tip)}</span>` : ''}</div>
         <button class="icon-btn plain" data-act="ex-menu" data-ei="${ei}" aria-label="Optionen">${U.icon.more}</button>
       </div>
       <div class="set-grid head"><div>Satz</div><div>Letztes Mal</div><div>kg</div><div>Wdh.</div><div></div></div>
@@ -295,11 +444,11 @@ const Train = {
     if (s.w == null) s.w = 0;
     s.done = true;
 
-    // Bestleistung prüfen
+    // Bestleistung prüfen (Aufwärmsätze zählen nicht)
     const b = Train.best(ex.exId);
     let pr = null;
-    if (b.count) {
-      const others = ex.sets.filter((x, i) => i !== si && x.done);
+    if (b.count && !Train.isWarm(s)) {
+      const others = ex.sets.filter((x, i) => i !== si && x.done && !Train.isWarm(x));
       const sessE = Math.max(0, ...others.map(x => Train.e1rm(x.w, x.r)));
       const sessW = Math.max(0, ...others.map(x => +x.w || 0));
       const sessR0 = Math.max(0, ...others.filter(x => !(+x.w)).map(x => +x.r || 0));
@@ -499,6 +648,41 @@ const Train = {
       }, 50);
     });
   },
+  setMenu(ei, si) {
+    const ex = S.active.exercises[ei], s = ex.sets[si];
+    const cur = s.t || 'n';
+    const types = [['n', '1', 'Normaler Satz'], ['w', 'W', 'Aufwärmsatz'], ['d', 'D', 'Drop-Satz'], ['f', 'F', 'Bis zum Versagen']];
+    const sh = U.sheet({
+      title: `${U.esc(ex.name)}, Satz ${Train.setLabel(ex.sets, si)}`,
+      body: `<div class="list">${types.map(t => `<button class="list-item" data-t="${t[0]}">
+          <b class="st-tag st-${t[0]}">${t[1]}</b>
+          <div class="li-main"><div class="li-title">${t[2]}</div></div>
+          ${cur === t[0] ? `<span style="color:var(--accent)">${U.icon.check.replace('<svg', '<svg style="width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2.5"')}</span>` : ''}
+        </button>`).join('')}</div>
+        <div class="list">
+          <button class="list-item" data-m="warm-before"><div class="li-main"><div class="li-title">Aufwärmsatz davor einfügen</div></div></button>
+          ${ex.sets.length > 1 ? '<button class="list-item" data-m="del"><div class="li-main"><div class="li-title" style="color:var(--danger)">Satz löschen</div></div></button>' : ''}
+        </div>
+        <p class="hint">Aufwärmsätze zählen nicht für Rekorde, Volumen und „Letztes Mal“.</p>`
+    });
+    sh.body.addEventListener('click', e => {
+      const t = e.target.closest('[data-t]');
+      const m = e.target.closest('[data-m]');
+      if (t) {
+        s.t = t.dataset.t === 'n' ? undefined : t.dataset.t;
+        if (s.t === 'w') s.pr = false;
+      } else if (m && m.dataset.m === 'warm-before') {
+        ex.sets.splice(si, 0, { w: null, r: null, done: false, pr: false, t: 'w' });
+      } else if (m && m.dataset.m === 'del') {
+        ex.sets.splice(si, 1);
+      } else return;
+      U.haptic();
+      Store.saveKV('active');
+      Train.rerenderCard(ei);
+      sh.close();
+    });
+  },
+
   exMenu(ei) {
     const a = S.active, ex = a.exercises[ei];
     const sh = U.sheet({
@@ -540,7 +724,14 @@ const Train = {
   /* ---------- Beenden / Verwerfen ---------- */
   async finish() {
     const a = S.active; if (!a) return;
-    const done = a.exercises.map(x => ({ exId: x.exId, name: x.name, sets: x.sets.filter(s => s.done).map(s => ({ w: +s.w || 0, r: +s.r || 0, pr: !!s.pr })) }))
+    const done = a.exercises.map(x => ({
+      exId: x.exId, name: x.name,
+      sets: x.sets.filter(s => s.done).map(s => {
+        const o = { w: +s.w || 0, r: +s.r || 0, pr: !!s.pr && !Train.isWarm(s) };
+        if (s.t && s.t !== 'n') o.t = s.t;
+        return o;
+      })
+    }))
       .filter(x => x.sets.length);
     if (!done.length) {
       if (await U.confirm('Du hast noch keinen Satz abgehakt. Workout ohne Speichern verwerfen?', { ok: 'Verwerfen', title: 'Keine Sätze' })) Train.discard();
@@ -688,18 +879,56 @@ const Train = {
   },
 
   /* ---------- Fertige Splits ---------- */
+  weekEditorHTML() {
+    const tpls = Train.tpls();
+    const sch = S.settings.schedule || { on: false, days: Train.defaultWeek(tpls.map(t => t.id), S.meta.split) };
+    return `<div class="card week-card">
+      <div class="week-head">
+        <div style="flex:1"><div class="card-title">Feste Trainingstage</div>
+        <div class="hint" style="margin:2px 0 0">${sch.on ? 'Ferrum richtet sich nach deinem Wochenplan.' : 'Aus: Die Tage kommen einfach der Reihe nach (Rotation).'}</div></div>
+        <label class="switch"><input type="checkbox" id="wk-on" ${sch.on ? 'checked' : ''}><i></i></label>
+      </div>
+      <div class="week-rows ${sch.on ? '' : 'off'}">
+        ${Train.WEEK_ORDER.map(wd => {
+          const v = sch.days[wd] || 'rest';
+          return `<label class="week-row ${v === 'rest' ? 'is-rest' : ''}"><span>${Train.WD_LONG[wd]}</span>
+            <select class="input" data-wd="${wd}" ${sch.on ? '' : 'disabled'}>
+              <option value="rest" ${v === 'rest' ? 'selected' : ''}>Ruhetag</option>
+              ${tpls.map(t => `<option value="${t.id}" ${v === t.id ? 'selected' : ''}>${U.esc(t.name)}</option>`).join('')}
+            </select></label>`;
+        }).join('')}
+      </div>
+    </div>`;
+  },
+  saveWeek(box) {
+    const on = $('#wk-on', box).checked;
+    const days = {};
+    $$('[data-wd]', box).forEach(sel => { days[sel.dataset.wd] = sel.value; });
+    S.settings.schedule = { on, days };
+    Store.saveKV('settings');
+    App.refresh();
+  },
+
   splitPicker() {
     const cur = S.meta.split;
     const sh = U.sheet({
-      title: 'Split wählen',
+      title: 'Split & Wochenplan',
       full: true,
-      body: `<p class="hint" style="margin:-2px 2px 14px">Ersetzt deine Vorlagen durch den gewählten Split. Dein Trainingsverlauf und deine Rekorde bleiben erhalten. Danach kannst du jede Vorlage noch anpassen.</p>
+      body: `<div id="week-box">${Train.weekEditorHTML()}</div>
+        <div class="section-title" style="font-size:17px">Split wählen</div>
+        <p class="hint" style="margin:-4px 2px 14px">Ersetzt deine Vorlagen durch den gewählten Split. Dein Trainingsverlauf und deine Rekorde bleiben erhalten. Danach kannst du jede Vorlage noch anpassen.</p>
         ${SPLITS.map(s => `<button class="card split-card ${s.key === cur ? 'on' : ''}" data-split="${s.key}">
           <div class="split-top"><b>${U.esc(s.name)}</b><span>${s.tpls.length} ${s.tpls.length === 1 ? 'Tag' : 'Tage'} in der Rotation</span></div>
           <p>${U.esc(s.desc)}</p>
           <div class="split-days">${s.tpls.map(t => `<span>${U.esc(t[0])}</span>`).join('')}</div>
           ${s.key === cur ? '<div class="split-cur">Aktuell gewählt</div>' : ''}
         </button>`).join('')}`
+    });
+    const box = sh.$('#week-box');
+    box.addEventListener('change', () => {
+      Train.saveWeek(box);
+      U.haptic();
+      box.innerHTML = Train.weekEditorHTML();
     });
     sh.body.addEventListener('click', async e => {
       const b = e.target.closest('[data-split]');
@@ -711,7 +940,10 @@ const Train = {
         { title: s.name + ' übernehmen?', ok: 'Übernehmen', danger: false });
       if (!ok) return;
       Train.applySplit(s);
-      sh.close();
+      // Danach den neuen Wochenplan zeigen, statt zu schließen
+      box.innerHTML = Train.weekEditorHTML();
+      sh.$$('.split-card').forEach(c => c.classList.toggle('on', c.dataset.split === s.key));
+      sh.body.scrollTo({ top: 0, behavior: 'smooth' });
     });
   },
 
@@ -739,8 +971,12 @@ const Train = {
     });
     S.meta.split = s.key;
     Store.saveKV('meta');
+    // Wochenplan passend zum neuen Split vorschlagen (Schalter bleibt, beim ersten Mal an)
+    const prevOn = S.settings.schedule ? S.settings.schedule.on : true;
+    S.settings.schedule = { on: prevOn, days: Train.defaultWeek(s.tpls.map((t, i) => 't:' + s.key + '-' + i), s.key) };
+    Store.saveKV('settings');
     U.haptic();
-    U.toast(`${s.name} übernommen`, 'ok');
+    U.toast(`${s.name} übernommen, Wochenplan angepasst`, 'ok');
     App.refresh();
   },
 
@@ -831,7 +1067,7 @@ const Train = {
         ${w.exercises.map(x => `<div class="card">
           <button class="card-title" data-ex="${x.exId}" style="text-align:left">${U.esc(x.name)}</button>
           ${x.sets.map((s, i) => `<div style="display:flex;justify-content:space-between;padding:6px 0;border-top:${i ? '1px solid var(--bg4)' : '0'}">
-            <span style="color:var(--muted)">Satz ${i + 1}${s.pr ? ' <span class="pr-badge">PR</span>' : ''}</span>
+            <span style="color:var(--muted)">${s.t && s.t !== 'n' ? `<b class="st-tag st-${s.t}">${Train.setLabel(x.sets, i)}</b> ${Train.SET_TYPES[s.t]}` : 'Satz ' + Train.setLabel(x.sets, i)}${s.pr ? ' <span class="pr-badge">PR</span>' : ''}</span>
             <span class="num" style="font-weight:700">${Train.setStr(s)}</span></div>`).join('')}
         </div>`).join('')}
         <button class="btn danger block" data-del>Workout löschen</button>`
@@ -876,6 +1112,7 @@ const Train = {
         ex.sets.push({ w: null, r: null, done: false, pr: false });
         Store.saveKV('active'); Train.rerenderCard(+el.dataset.ei);
       },
+      'set-type': el => Train.setMenu(+el.dataset.ei, +el.dataset.si),
       'set-rm': el => {
         const ex = S.active.exercises[+el.dataset.ei];
         if (ex.sets.length <= 1) return;

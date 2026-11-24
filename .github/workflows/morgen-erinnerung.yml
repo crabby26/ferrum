@@ -1,22 +1,34 @@
-# Ferrum – Morgen-Erinnerung
-# Schickt jeden Morgen um ca. 7 Uhr (deutsche Zeit) ein Signal an dein iPhone.
-# Welcher Split-Tag dran ist, berechnet die App selbst auf dem iPhone.
+# Ferrum – Mitteilungen
+# Schickt Signale an dein iPhone (deutsche Zeit):
+#   täglich  7:00  Erinnerung zum Wiegen
+#   täglich  8:00  heutiger Trainingstag + Tagesziele
+#   sonntags 18:00 Wochen-Check-in
+# Den Inhalt berechnet die App selbst auf dem iPhone.
 #
 # Benötigte Secrets (Repository → Settings → Secrets and variables → Actions):
 #   VAPID_PRIVATE_KEY   – privater Schlüssel (einmalig eingerichtet)
 #   PUSH_SUBSCRIPTION   – Code aus Ferrum → Einstellungen → Mitteilungen
 #
-# Von Hand testen: Actions → „Morgen-Erinnerung“ → „Run workflow“.
+# Von Hand testen: Actions → „Morgen-Erinnerung“ → „Run workflow“ → Art wählen.
 
 name: Morgen-Erinnerung
 
 on:
   schedule:
-    # GitHub rechnet in UTC: 5 Uhr UTC = 7 Uhr Sommerzeit, 6 Uhr UTC = 7 Uhr Winterzeit.
-    # Das Skript sendet nur bei dem Lauf, der in Deutschland 7 Uhr trifft.
-    - cron: '0 5 * * *'
-    - cron: '0 6 * * *'
+    # GitHub rechnet in UTC. Je nach Sommer-/Winterzeit trifft ein anderer
+    # Lauf die deutsche Uhrzeit – das Skript wählt den passenden aus.
+    - cron: '0 5 * * *'    # 7 Uhr (Sommer)
+    - cron: '0 6 * * *'    # 7 Uhr (Winter) bzw. 8 Uhr (Sommer)
+    - cron: '0 7 * * *'    # 8 Uhr (Winter)
+    - cron: '0 16 * * 0'   # Sonntag 18 Uhr (Sommer)
+    - cron: '0 17 * * 0'   # Sonntag 18 Uhr (Winter)
   workflow_dispatch:
+    inputs:
+      art:
+        description: 'Welche Mitteilung?'
+        type: choice
+        options: [day, weigh, checkin]
+        default: day
 
 permissions:
   contents: write
@@ -46,11 +58,12 @@ jobs:
           VAPID_PUBLIC_KEY: BLJcR8jlFdX-LbsExB6DtqSAlCuRnJ9dDUEnqIOH8HYxCq-8k8hgq7nZOFdiJuSfQYRrag2jkktWhPpGPiM21mA
           VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
           PUSH_SUBSCRIPTION: ${{ secrets.PUSH_SUBSCRIPTION }}
-          FORCE: ${{ github.event_name == 'workflow_dispatch' }}
+          SCHEDULE: ${{ github.event.schedule }}
+          MANUAL_TYPE: ${{ github.event.inputs.art }}
         run: node send.mjs
 
       # GitHub pausiert Zeitpläne in Repositories ohne Aktivität nach 60 Tagen.
-      # Ein leerer Commit alle ~45 Tage hält die Erinnerung am Leben.
+      # Ein leerer Commit alle ~45 Tage hält die Erinnerungen am Leben.
       - name: Zeitplan aktiv halten
         if: github.event_name == 'schedule'
         run: |

@@ -43,6 +43,15 @@ const App = {
     const ref = S.meta.lastBackup || S.meta.installedAt || Date.now();
     return Date.now() - ref > 7 * 86400000;
   },
+  // Sprungziel aus einer Mitteilung (?go=weigh|checkin|today)
+  handleGo(go) {
+    if (go === 'checkin') { App.go('today'); setTimeout(() => Progress.checkin(), 300); }
+    else if (go === 'weigh') {
+      App.go('progress');
+      setTimeout(() => { const i = $('#pw-kg'); if (i) { i.scrollIntoView({ block: 'center' }); i.focus(); } }, 450);
+    } else if (go === 'today') App.go('today');
+  },
+
   applyAccent() {
     // Nicht mehr angebotene Farben (aus älteren Versionen) fallen auf iOS-Blau zurück
     const ok = ACCENTS.some(a => a[0] === S.settings.accent);
@@ -98,7 +107,17 @@ const App = {
           <div class="stat"><b>${U.n(Train.volume(w))}</b><span>kg Volumen</span></div>
         </div></button>`).join('');
     } else {
-      const next = Train.nextTemplate();
+      const info = Train.todayInfo();
+      const next = info.tpl || null;
+      if (info.rest) {
+        train = `<div class="card">
+          <div style="display:flex;align-items:center;gap:12px">
+            <div style="flex:1;min-width:0"><div class="card-sub">Heute</div>
+              <div class="card-title" style="font-size:20px">Ruhetag 😌</div>
+              <div class="card-sub">${U.esc(Train.restText(info))}</div></div>
+            <button class="btn small" data-act="go" data-tab="train">Trotzdem</button>
+          </div></div>`;
+      } else
       train = `<div class="card">
         <div style="display:flex;align-items:center;gap:12px">
           <div style="flex:1;min-width:0"><div class="card-sub">Heute dran</div>
@@ -117,6 +136,7 @@ const App = {
         <div class="streak ${streak.n ? '' : 'cold'}" title="Tage in Folge getrackt">${U.icon.flame}${streak.n} ${streak.n === 1 ? 'Tag' : 'Tage'}</div>
       </div>
       ${showInstall ? `<div class="inline-banner"><div class="txt"><b>Als App installieren</b>Tippe unten in Safari auf „Teilen“ und dann auf „Zum Home-Bildschirm“.</div><button class="icon-btn plain" data-act="hide-install" aria-label="Ausblenden">${U.icon.close}</button></div>` : ''}
+      ${now.getDay() === 0 && S.meta.lastCheckin !== day ? `<div class="inline-banner"><div class="txt"><b>Dein Wochen-Check-in</b>Training, Ernährung und Gewicht der letzten 7 Tage.</div><button class="btn small primary" data-act="checkin">Ansehen</button></div>` : ''}
       ${App.needsBackup() ? `<div class="inline-banner"><div class="txt"><b>Backup fällig</b>${S.meta.lastBackup ? 'Dein letztes Backup ist älter als 7 Tage.' : 'Sichere deine Daten einmal pro Woche.'}</div><button class="btn small primary" data-act="backup">Sichern</button></div>` : ''}
       <div class="hero-rings">
         ${big}
@@ -193,6 +213,7 @@ const App = {
     });
     Object.assign(App.actions, {
       'go': el => App.go(el.dataset.tab),
+      'checkin': () => Progress.checkin(),
       'quick-add': () => Nutri.openPicker({ mode: 'log', meal: App.mealByTime(), day: U.today() }),
       'instant': el => {
         const f = S.meta.recents.find(r => r.id === el.dataset.id);
@@ -247,6 +268,17 @@ const App = {
     App.updateBackupDot();
     if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
     App.registerSW();
+    // Aus einer Mitteilung geöffnet?
+    const go = new URLSearchParams(location.search).get('go');
+    if (go) {
+      history.replaceState(null, '', location.pathname);
+      App.handleGo(go);
+    }
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.addEventListener('message', e => {
+        if (e.data && e.data.type === 'GO') App.handleGo(e.data.go);
+      });
+    }
   }
 };
 

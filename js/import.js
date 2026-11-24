@@ -123,7 +123,9 @@ const HevyImport = {
       const start = HevyImport.parseDate(get(r, 'start_time'));
       if (!start) { skip.other++; return; }
       const type = get(r, 'set_type').toLowerCase();
-      if (type === 'warmup') { skip.warmup++; return; }
+      // Hevy-Satztypen übernehmen: warmup → W, dropset → D, failure → F
+      const t = type === 'warmup' ? 'w' : type === 'dropset' ? 'd' : type === 'failure' ? 'f' : undefined;
+      if (t === 'w') skip.warmup++;
       const reps = Math.round(parseFloat(get(r, 'reps')) || 0);
       if (!(reps > 0)) { skip.other++; return; } // Cardio, Zeit- oder Distanzsätze
       const w = parseFloat(String(get(r, 'weight_kg')).replace(',', '.')) || 0;
@@ -157,7 +159,9 @@ const HevyImport = {
         ex = wo.exercises.find(x => x.exId === exId && x._name === exName) || null;
         if (!ex) { ex = { exId, name: (S.exercises.find(e => e.id === exId) || {}).name || exName, sets: [], _name: exName }; wo.exercises.push(ex); }
       }
-      ex.sets.push({ w, r: reps, pr: false });
+      const set = { w, r: reps, pr: false };
+      if (t) set.t = t;
+      ex.sets.push(set);
     });
 
     const workouts = [...byWorkout.values()].filter(w => w.exercises.length);
@@ -175,6 +179,7 @@ const HevyImport = {
         const b = best[x.exId];
         const session = { e: 0, w: 0, r0: 0 };
         x.sets.forEach(s => {
+          if (s.t === 'w') { if (importedIds.has(w.id) && s.pr) { s.pr = false; changed = true; } return; }
           const e = Train.e1rm(s.w, s.r);
           let pr = false;
           if (b) {
@@ -204,10 +209,9 @@ const HevyImport = {
 
     const first = res.workouts[0], last = res.workouts[res.workouts.length - 1];
     const already = res.workouts.filter(w => S.workouts.some(x => x.id === w.id)).length;
-    const skipped = res.skip.warmup + res.skip.other;
-    const msg = `${res.workouts.length} Workouts mit ${res.sets} Sätzen vom ${U.fmtDate(first.date, true)} bis ${U.fmtDate(last.date, true)}.`
+    const msg = `${res.workouts.length} Workouts mit ${res.sets} Arbeitssätzen${res.skip.warmup ? ` und ${res.skip.warmup} Aufwärmsätzen` : ''} vom ${U.fmtDate(first.date, true)} bis ${U.fmtDate(last.date, true)}.`
       + (res.newExercises.length ? ` ${res.newExercises.length} Übungen werden neu angelegt.` : '')
-      + (skipped ? ` Nicht übernommen: ${res.skip.warmup} Aufwärmsätze und ${res.skip.other} Cardio- oder Zeitsätze.` : '')
+      + (res.skip.other ? ` Nicht übernommen: ${res.skip.other} Cardio- oder Zeitsätze.` : '')
       + (already ? ` ${already} davon sind schon importiert und werden nur aktualisiert.` : '')
       + ' Deine bisherigen Ferrum-Daten bleiben erhalten.';
     if (!(await U.confirm(msg, { title: 'Aus Hevy übernehmen?', ok: 'Übernehmen', danger: false }))) return;

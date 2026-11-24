@@ -83,6 +83,10 @@ const Settings = {
         <label class="field"><span>Standard-Pause zwischen Sätzen</span>
           <select class="input" data-set="rest">${[45, 60, 90, 120, 150, 180, 240, 300].map(s => `<option value="${s}" ${+st.rest === s ? 'selected' : ''}>${U.fmtDur(s * 1000)} min</option>`).join('')}</select>
         </label>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+          <div style="flex:1"><b>Steigerungs-Vorschläge</b><div class="hint" style="margin:2px 0 0">Schlägt pro Übung Gewicht und Wiederholungen vor (progressive Überlastung): Oberes Ende des Wdh.-Bereichs geschafft → mehr Gewicht, sonst 1 Wdh. mehr.</div></div>
+          <label class="switch"><input type="checkbox" data-set="overload" ${st.overload !== false ? 'checked' : ''}><i></i></label>
+        </div>
         <div style="display:flex;align-items:center;gap:12px">
           <div style="flex:1"><b>Ton am Ende der Pause</b><div class="hint" style="margin:2px 0 0">Bei eingeschaltetem Stummschalter ist der Ton nicht zu hören.</div></div>
           <label class="switch"><input type="checkbox" data-set="sound" ${st.sound !== false ? 'checked' : ''}><i></i></label>
@@ -139,7 +143,7 @@ const Settings = {
   async drawPush() {
     const box = $('#push-card');
     if (!box) return;
-    const title = '<div class="card-title">Morgen-Erinnerung um 7 Uhr</div><p class="hint" style="margin:4px 0 12px">Jeden Morgen eine Mitteilung, welcher Tag deines Splits heute dran ist. Berechnet wird das auf deinem iPhone, deine Daten verlassen es nicht.</p>';
+    const title = '<div class="card-title">Erinnerungen</div><div class="push-times"><div><b>7:00</b><span>Wiegen</span></div><div><b>8:00</b><span>Heutiger Trainingstag und Tagesziele</span></div><div><b>So 18:00</b><span>Wochen-Check-in</span></div></div><p class="hint" style="margin:0 0 12px">Der Inhalt wird auf deinem iPhone berechnet, deine Daten verlassen es nicht.</p>';
     if (!Settings.pushSupported()) {
       box.innerHTML = title + '<p class="hint" style="margin:0">Funktioniert nur in der installierten App (Safari → Teilen → „Zum Home-Bildschirm“), ab iOS 16.4.</p>';
       return;
@@ -161,7 +165,9 @@ const Settings = {
       ${confirmed ? '' : `<p class="hint" style="margin:0">Letzter Schritt: GitHub braucht diesen Code, um dein iPhone zu erreichen. Kopiere ihn und schick ihn an Claude, oder trag ihn selbst bei GitHub als Secret <b>PUSH_SUBSCRIPTION</b> ein (Repository → Settings → Secrets and variables → Actions).</p>
       <div class="code-box">${U.esc(code)}</div>
       <div class="btn-row" style="margin-bottom:10px"><button class="btn" data-act="push-copy">Code kopieren</button><button class="btn" data-act="push-done">Erledigt</button></div>`}
-      <div class="btn-row"><button class="btn" data-act="push-test">Test-Mitteilung</button><button class="btn danger" data-act="push-off">Ausschalten</button></div>`;
+      <div class="hint" style="margin:0 0 6px">Test-Mitteilung senden:</div>
+      <div class="chips wrap" style="margin-bottom:12px"><button class="chip" data-act="push-test" data-kind="weigh">Wiegen</button><button class="chip" data-act="push-test" data-kind="day">Trainingstag</button><button class="chip" data-act="push-test" data-kind="checkin">Check-in</button></div>
+      <button class="btn danger block" data-act="push-off">Mitteilungen ausschalten</button>`;
     box.dataset.code = code;
   },
   b64ToBytes(s) {
@@ -201,7 +207,7 @@ const Settings = {
   saveField(el) {
     const k = el.dataset.set;
     const st = S.settings;
-    if (k === 'sound' || k === 'haptics') { st[k] = el.checked; if (k === 'haptics' && el.checked) U.haptic(); }
+    if (k === 'sound' || k === 'haptics' || k === 'overload') { st[k] = el.checked; if (k === 'haptics' && el.checked) U.haptic(); }
     else if (k === 'activity' || k === 'rest') st[k] = +el.value;
     else {
       const x = U.parseNum(el.value);
@@ -266,9 +272,9 @@ const Settings = {
       const v = Nutri.calc(e.food, e.grams);
       food.push([e.date, mealName(e.meal), e.food.name, e.food.brand || '', e.food.src === 'quick' ? '' : e.grams, v.kcal, v.p, v.c, v.f]);
     });
-    const train = [['Datum', 'Workout', 'Übung', 'Satz', 'Gewicht (kg)', 'Wiederholungen', 'Geschätztes 1RM (kg)', 'Rekord']];
+    const train = [['Datum', 'Workout', 'Übung', 'Satz', 'Satztyp', 'Gewicht (kg)', 'Wiederholungen', 'Geschätztes 1RM (kg)', 'Rekord']];
     S.workouts.slice().sort((a, b) => a.start - b.start).forEach(w => w.exercises.forEach(x => x.sets.forEach((s, i) => {
-      train.push([w.date, w.name, x.name, i + 1, +s.w || 0, +s.r || 0, Train.e1rm(s.w, s.r), s.pr ? 'ja' : '']);
+      train.push([w.date, w.name, x.name, Train.setLabel(x.sets, i), Train.SET_TYPES[s.t || 'n'], +s.w || 0, +s.r || 0, s.t === 'w' ? '' : Train.e1rm(s.w, s.r), s.pr ? 'ja' : '']);
     })));
     const weight = [['Datum', 'Gewicht (kg)']].concat(Progress.weightsSorted().map(w => [w.id, w.kg]));
     const d = U.today();
@@ -359,11 +365,11 @@ const Settings = {
         Store.saveKV('meta');
         Settings.drawPush();
       },
-      'push-test': async () => {
+      'push-test': async el => {
         const reg = await Settings.pushReg();
         const sw = reg && (reg.active || navigator.serviceWorker.controller);
         if (!sw) { U.toast('Service Worker noch nicht bereit – App neu öffnen', 'err'); return; }
-        sw.postMessage({ type: 'TEST_PUSH' });
+        sw.postMessage({ type: 'TEST_PUSH', kind: el.dataset.kind || 'day' });
         U.toast('Test-Mitteilung gesendet');
       },
       'push-off': async () => {

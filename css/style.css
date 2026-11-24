@@ -1142,3 +1142,36 @@ html.standalone .rest-bar { bottom: auto; top: 100vh; transform: translateY(0); 
 html.standalone .rest-bar.show { transform: translateY(-100%); }
 html.standalone .confetti { bottom: auto; height: 100vh; }
 html.reflow #app { height: calc(100vh + 1px); }
+
+/* Satztypen (wie Hevy) */
+.set-no { background: transparent; border: 0; color: var(--muted); font-weight: 700; min-height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; gap: 2px; flex-direction: column; }
+.set-no:active { background: rgba(255, 255, 255, .08); }
+.set-no .pr-badge { margin: 0; font-size: 9px; padding: 0 5px; }
+.st-w { color: var(--fat); }
+.st-d { color: #BF5AF2; }
+.st-f { color: var(--danger); }
+.st-tag { display: inline-flex; align-items: center; justify-content: center; min-width: 26px; height: 26px; border-radius: 8px; background: rgba(255, 255, 255, .08); font-weight: 700; font-size: 14px; color: var(--muted); }
+.st-tag.st-w { color: var(--fat); background: rgba(255, 214, 10, .14); }
+.st-tag.st-d { color: #BF5AF2; background: rgba(191, 90, 242, .16); }
+.st-tag.st-f { color: var(--danger); background: rgba(255, 69, 58, .14); }
+.set-row.type-w .set-in { opacity: .85; }
+
+/* Steigerungs-Vorschlag */
+.set-in.sug::placeholder { color: var(--accent); opacity: .75; }
+.sug-tip { display: inline-block; margin-top: 4px; font-size: 12.5px; font-weight: 600; color: var(--accent); background: var(--accent-soft); padding: 2px 9px; border-radius: 999px; }
+.ex-head .t span:not(.sug-tip) { display: block; }
+
+/* Wochenplan */
+.week-head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.week-rows { display: grid; gap: 6px; transition: opacity .2s; }
+.week-rows.off { opacity: .45; }
+.week-row { display: grid; grid-template-columns: 110px 1fr; align-items: center; gap: 10px; }
+.week-row span { font-size: 15px; font-weight: 500; }
+.week-row .input { min-height: 40px; font-size: 16px; padding: 0 30px 0 12px; }
+.week-row.is-rest span, .week-row.is-rest .input { color: var(--muted); }
+
+/* Erinnerungszeiten */
+.push-times { display: grid; gap: 8px; margin: 10px 0 12px; }
+.push-times div { display: flex; gap: 12px; align-items: baseline; }
+.push-times b { min-width: 74px; font-variant-numeric: tabular-nums; font-weight: 600; }
+.push-times span { color: var(--muted); font-size: 15px; }
