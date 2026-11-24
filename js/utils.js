@@ -359,27 +359,53 @@ const U = {
   }
 };
 
-/* ---------- Tastatur-sichere Sheets (iOS) ---------- */
+/* ---------- Vollbild & tastatur-sichere Sheets (iOS) ----------
+   iOS 26 meldet in Home-Bildschirm-Apps manchmal eine zu kleine Höhe
+   (v. a. nachdem die Tastatur offen war) – dann entsteht unten ein
+   schwarzer Balken. Deshalb richtet sich das Layout in der installierten
+   App nach 100vh (= ganzer Bildschirm) statt nach der gemeldeten Höhe. */
 (function () {
   const vv = window.visualViewport;
   const root = document.documentElement;
+  const standalone = window.navigator.standalone === true ||
+    (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
+  if (standalone) root.classList.add('standalone');
+
+  function keyboardOpen() {
+    if (!vv) return false;
+    const full = standalone ? Math.max(screen.height, screen.width > screen.height ? screen.width : screen.height) : window.innerHeight;
+    return vv.height < full - 150;
+  }
   function upd() {
     if (!vv) return;
-    root.style.setProperty('--vvh', vv.height + 'px');
-    root.style.setProperty('--vvtop', vv.offsetTop + 'px');
+    if (standalone && !keyboardOpen()) {
+      // Keine Tastatur: Sheets nutzen den ganzen Bildschirm
+      root.style.setProperty('--vvh', '100vh');
+      root.style.setProperty('--vvtop', '0px');
+    } else {
+      root.style.setProperty('--vvh', vv.height + 'px');
+      root.style.setProperty('--vvtop', vv.offsetTop + 'px');
+    }
   }
   if (vv) {
     vv.addEventListener('resize', upd);
     vv.addEventListener('scroll', upd);
     upd();
   }
-  // Nach dem Schließen der Tastatur die Seite wieder ganz nach oben schieben
+  // Nach dem Schließen der Tastatur Seite zurücksetzen und Layout neu berechnen lassen
   document.addEventListener('focusout', () => {
     setTimeout(() => {
       const a = document.activeElement;
-      if (!a || !/INPUT|TEXTAREA|SELECT/.test(a.tagName)) window.scrollTo(0, 0);
-    }, 80);
+      if (!a || !/INPUT|TEXTAREA|SELECT/.test(a.tagName)) {
+        window.scrollTo(0, 0);
+        upd();
+        root.classList.add('reflow');
+        requestAnimationFrame(() => root.classList.remove('reflow'));
+      }
+    }, 120);
   });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) upd(); });
+  window.addEventListener('orientationchange', () => setTimeout(upd, 300));
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
       const layers = $$('#sheets .sheet-layer');

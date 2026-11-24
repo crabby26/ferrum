@@ -15,6 +15,10 @@
   <link rel="apple-touch-icon" href="icons/icon-180.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
   <link rel="stylesheet" href="css/style.css">
+  <script>
+    // Installierte App sofort erkennen (für das Vollbild-Layout)
+    if (navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches)) document.documentElement.classList.add('standalone');
+  </script>
 </head>
 <body>
   <div id="app">

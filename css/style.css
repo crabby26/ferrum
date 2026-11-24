@@ -1074,3 +1074,71 @@ body::before {
 .split-days { display: flex; flex-wrap: wrap; gap: 6px; }
 .split-days span { font-size: 13px; font-weight: 600; padding: 5px 10px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); }
 .split-cur { margin-top: 10px; font-size: 13px; font-weight: 600; color: var(--accent); }
+
+/* =========================================================
+   Schlicht-Ebene (Ferrum 4.3)
+   Weniger Effekte, mehr Ruhe: neutrale Flächen ohne Schatten
+   und Farbschimmer. Glas nur noch dort, wo etwas über dem
+   Inhalt schwebt (Tab-Leiste, Sheets, Meldungen, Leisten).
+   ========================================================= */
+body::before { background: radial-gradient(90% 40% at 50% -8%, rgba(255, 255, 255, .055), transparent 70%); }
+.workout-screen::before { display: none; }
+
+.card, .list, .meal, .sum-card, .next-card, .ex-card, .inline-banner, .day-label, .streak, .tile {
+  background: rgba(255, 255, 255, .055);
+  border: .5px solid rgba(255, 255, 255, .06);
+  box-shadow: none;
+}
+.list-item + .list-item::before, .meal .list-item::before { background: rgba(255, 255, 255, .07); }
+.food-macros > div, .stat, .kpi, .sheet-body .list, .sheet-body .card { background: rgba(255, 255, 255, .05); border: 0; box-shadow: none; }
+
+.btn, .icon-btn, .chip, .seg, .input, select.input, .set-in, .set-check, .quick-chip, .amount-field {
+  background: rgba(255, 255, 255, .08);
+  border: 0;
+  box-shadow: none;
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+}
+.sheet-body .input, .sheet-body select.input, .sheet-body .chip, .sheet-body .seg { background: rgba(255, 255, 255, .08); }
+.icon-btn.plain { background: transparent; }
+.btn.primary, .chip.on, .sheet-body .chip.on, .icon-btn.accent, .workout-pill, .toast.ok, .pr-pop {
+  background: var(--accent); color: var(--ink); border: 0; box-shadow: none;
+}
+.btn.primary:active { background: var(--accent-2); }
+.btn.danger { background: rgba(255, 69, 58, .12); border: 0; }
+.meal-head .icon-btn.accent { background: var(--accent-soft); color: var(--accent); border: 0; box-shadow: none; }
+.set-row.done .set-check { background: var(--ok); }
+.seg button.on, .sheet-body .seg button.on { background: rgba(255, 255, 255, .16); box-shadow: none; }
+.input:focus, .set-in:focus, .amount-field:focus-within { box-shadow: 0 0 0 1.5px var(--accent); }
+.qc-plus { background: transparent; }
+.add-pill { background: var(--accent-soft); }
+
+/* Schwebendes Glas: ruhiger */
+.tabbar {
+  background: rgba(28, 28, 30, .72);
+  -webkit-backdrop-filter: blur(24px) saturate(180%); backdrop-filter: blur(24px) saturate(180%);
+  border: .5px solid rgba(255, 255, 255, .09);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .5);
+}
+.tab.active { background: rgba(255, 255, 255, .1); box-shadow: none; }
+.ws-head, .rest-bar, .toast, .banner { box-shadow: 0 8px 24px rgba(0, 0, 0, .35); background: rgba(28, 28, 30, .78); border-color: rgba(255, 255, 255, .08); }
+.sheet { background: rgba(24, 24, 26, .92); box-shadow: none; border-top-color: rgba(255, 255, 255, .08); }
+
+/* Typografie: etwas feiner */
+.page-title { font-weight: 700; letter-spacing: -.025em; }
+.section-title { font-size: 19px; font-weight: 600; }
+.hero-rings > .ring-wrap .ring-center .v { font-weight: 600; }
+.streak { font-weight: 500; }
+
+/* =========================================================
+   Vollbild in der installierten App (iOS)
+   ========================================================= */
+.tabbar, .workout-pill { position: absolute; }
+html.standalone, html.standalone body { height: 100vh; }
+html.standalone body { top: 0; bottom: auto; height: 100vh; }
+html.standalone #app { position: fixed; top: 0; left: 0; right: 0; bottom: auto; height: 100vh; }
+html.standalone body::before { bottom: auto; height: 100vh; }
+html.standalone .workout-screen { bottom: auto; height: 100vh; }
+html.standalone .rest-bar { bottom: auto; top: 100vh; transform: translateY(0); }
+html.standalone .rest-bar.show { transform: translateY(-100%); }
+html.standalone .confetti { bottom: auto; height: 100vh; }
+html.reflow #app { height: calc(100vh + 1px); }
