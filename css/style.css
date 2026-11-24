@@ -1062,3 +1062,15 @@ body::before {
   background: rgba(255, 255, 255, .06); border-radius: 14px; padding: 10px 12px; margin: 10px 0;
   max-height: 96px; overflow: auto; word-break: break-all; user-select: all; -webkit-user-select: all;
 }
+
+/* Split-Auswahl */
+.split-card { display: block; width: 100%; text-align: left; margin-bottom: 12px; transition: transform .12s var(--ease); }
+.split-card:active { transform: scale(.98); }
+.split-card.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), var(--glass-hi); }
+.split-top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.split-top b { font-size: 18px; font-weight: 700; letter-spacing: -.02em; }
+.split-top span { font-size: 13px; color: var(--muted); white-space: nowrap; }
+.split-card p { margin: 6px 0 12px; font-size: 14px; color: var(--muted); line-height: 1.4; }
+.split-days { display: flex; flex-wrap: wrap; gap: 6px; }
+.split-days span { font-size: 13px; font-weight: 600; padding: 5px 10px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); }
+.split-cur { margin-top: 10px; font-size: 13px; font-weight: 600; color: var(--accent); }

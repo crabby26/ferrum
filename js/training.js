@@ -114,6 +114,10 @@ const Train = {
           <button class="icon-btn" data-act="start" data-id="${t.id}" aria-label="${U.esc(t.name)} starten">${U.icon.play}</button>
         </div>`).join('') || '<div class="empty">Noch keine Vorlagen.</div>'}
       </div>
+      <button class="list-item list" data-act="split-pick" style="border-radius:var(--r-md)">
+        <div class="li-main"><div class="li-title">Fertigen Split wählen</div>
+        <div class="li-sub">${S.meta.split && SPLITS.some(s => s.key === S.meta.split) ? 'Aktuell: ' + U.esc(SPLITS.find(s => s.key === S.meta.split).name) : 'PPL, Arnold, Upper/Lower, Ganzkörper …'}</div></div>${U.icon.chevron}
+      </button>
       <div class="section-title">Übungen <button class="link" data-act="ex-new">Neue Übung</button></div>
       <button class="list-item list" data-act="ex-browse" style="border-radius:var(--r-md)">
         <div class="li-main"><div class="li-title">Alle Übungen</div><div class="li-sub">${S.exercises.length} Übungen, Bestleistungen und Verlauf</div></div>${U.icon.chevron}
@@ -683,6 +687,63 @@ const Train = {
     if (eb) eb.onclick = () => Train.exerciseForm(ex, () => sh.close());
   },
 
+  /* ---------- Fertige Splits ---------- */
+  splitPicker() {
+    const cur = S.meta.split;
+    const sh = U.sheet({
+      title: 'Split wählen',
+      full: true,
+      body: `<p class="hint" style="margin:-2px 2px 14px">Ersetzt deine Vorlagen durch den gewählten Split. Dein Trainingsverlauf und deine Rekorde bleiben erhalten. Danach kannst du jede Vorlage noch anpassen.</p>
+        ${SPLITS.map(s => `<button class="card split-card ${s.key === cur ? 'on' : ''}" data-split="${s.key}">
+          <div class="split-top"><b>${U.esc(s.name)}</b><span>${s.tpls.length} ${s.tpls.length === 1 ? 'Tag' : 'Tage'} in der Rotation</span></div>
+          <p>${U.esc(s.desc)}</p>
+          <div class="split-days">${s.tpls.map(t => `<span>${U.esc(t[0])}</span>`).join('')}</div>
+          ${s.key === cur ? '<div class="split-cur">Aktuell gewählt</div>' : ''}
+        </button>`).join('')}`
+    });
+    sh.body.addEventListener('click', async e => {
+      const b = e.target.closest('[data-split]');
+      if (!b) return;
+      const s = SPLITS.find(x => x.key === b.dataset.split);
+      const n = S.templates.length;
+      const ok = await U.confirm(
+        `${n ? `Deine ${n} aktuellen Vorlagen werden durch` : 'Es werden'} ${s.tpls.length} Vorlagen ${n ? 'ersetzt' : 'angelegt'}: ${s.tpls.map(t => U.esc(t[0])).join(', ')}. Dein Trainingsverlauf bleibt erhalten.`,
+        { title: s.name + ' übernehmen?', ok: 'Übernehmen', danger: false });
+      if (!ok) return;
+      Train.applySplit(s);
+      sh.close();
+    });
+  },
+
+  // Übung per Name finden (auch eigene/importierte), sonst neu anlegen
+  ensureExercise(name) {
+    const hit = S.exercises.find(e => U.norm(e.name) === U.norm(name));
+    if (hit) return hit.id;
+    const id = 'e:' + U.slug(name);
+    const byId = S.exercises.find(e => e.id === id);
+    if (byId) return byId.id;
+    const known = DEFAULT_EXERCISES.find(e => e.id === id);
+    Store.put('exercises', { id, name, muscle: (known && known.muscle) || SPLIT_EXTRA_MUSCLE[name] || 'Sonstiges', custom: false });
+    return id;
+  },
+
+  applySplit(s) {
+    S.templates.slice().forEach(t => Store.del('templates', t.id));
+    s.tpls.forEach((t, i) => {
+      Store.put('templates', {
+        id: 't:' + s.key + '-' + i,
+        name: t[0],
+        order: i,
+        exercises: t[1].map(x => ({ exId: Train.ensureExercise(x[0]), sets: x[1], reps: x[2] }))
+      });
+    });
+    S.meta.split = s.key;
+    Store.saveKV('meta');
+    U.haptic();
+    U.toast(`${s.name} übernommen`, 'ok');
+    App.refresh();
+  },
+
   /* ---------- Vorlagen ---------- */
   templateEditor(tpl) {
     const isNew = !tpl;
@@ -829,6 +890,7 @@ const Train = {
       'rest-adj': el => Train.adjustRest(+el.dataset.d),
       'rest-skip': () => Train.skipRest(),
       'tpl-new': () => Train.templateEditor(null),
+      'split-pick': () => Train.splitPicker(),
       'tpl-edit': el => Train.templateEditor(S.templates.find(t => t.id === el.dataset.id)),
       'ex-new': () => Train.exerciseForm(null),
       'ex-browse': () => Train.exercisePicker(id => Train.exerciseDetail(id), { browse: true, title: 'Übungen' }),

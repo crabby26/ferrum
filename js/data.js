@@ -240,3 +240,78 @@ const DEFAULT_TEMPLATES = [
     ]
   }
 ];
+
+/* ---------- Fertige Splits ----------
+   Jeder Tag: [Übung, Sätze, Wiederholungen]. Übungen, die es noch
+   nicht gibt, werden beim Auswählen automatisch angelegt. */
+const SPLIT_EXTRA_MUSCLE = { 'Arnold Press': 'Schultern' };
+const SPLITS = [
+  {
+    key: 'ppl', name: 'Push / Pull / Legs', days: 3,
+    desc: 'Der Klassiker: Drücken, Ziehen, Beine. 3 Tage oder zweimal durch mit 6 Tagen pro Woche.',
+    tpls: [
+      ['Push', [['Bankdrücken (Langhantel)', 4, '6-8'], ['Schrägbankdrücken (Kurzhantel)', 3, '8-10'], ['Schulterdrücken (Kurzhantel)', 3, '8-10'], ['Seitheben', 3, '12-15'], ['Trizepsdrücken am Kabel', 3, '10-12'], ['Overhead Trizeps-Extension', 3, '10-12']]],
+      ['Pull', [['Klimmzüge', 3, '6-10'], ['Langhantelrudern', 3, '8-10'], ['Latziehen', 3, '10-12'], ['Kabelrudern sitzend', 3, '10-12'], ['Face Pulls', 3, '15'], ['Langhantel-Curls', 3, '8-12'], ['Hammer Curls', 3, '10-12']]],
+      ['Legs', [['Kniebeugen', 4, '6-8'], ['Rumänisches Kreuzheben', 3, '8-10'], ['Beinpresse', 3, '10-12'], ['Beinbeuger liegend', 3, '10-12'], ['Beinstrecker', 3, '12-15'], ['Wadenheben stehend', 4, '12-15']]]
+    ]
+  },
+  {
+    key: 'arnold', name: 'Arnold Split', days: 3,
+    desc: 'Brust & Rücken, Schultern & Arme, Beine. Viel Volumen, ideal zweimal pro Woche (6 Tage).',
+    tpls: [
+      ['Brust & Rücken', [['Bankdrücken (Langhantel)', 4, '6-8'], ['Klimmzüge', 4, '6-10'], ['Schrägbankdrücken (Kurzhantel)', 3, '8-10'], ['Langhantelrudern', 3, '8-10'], ['Butterfly (Maschine)', 3, '10-12'], ['Latziehen', 3, '10-12']]],
+      ['Schultern & Arme', [['Military Press (Langhantel)', 4, '6-8'], ['Arnold Press', 3, '8-12'], ['Seitheben', 3, '12-15'], ['Langhantel-Curls', 3, '8-10'], ['French Press (SZ)', 3, '8-10'], ['Hammer Curls', 3, '10-12'], ['Trizepsdrücken am Kabel', 3, '10-12']]],
+      ['Beine', [['Kniebeugen', 4, '6-8'], ['Rumänisches Kreuzheben', 3, '8-10'], ['Beinpresse', 3, '10-12'], ['Beinbeuger liegend', 3, '10-12'], ['Wadenheben stehend', 4, '12-15'], ['Crunches am Kabel', 3, '12-15']]]
+    ]
+  },
+  {
+    key: 'upperlower', name: 'Oberkörper / Unterkörper', days: 4,
+    desc: 'Upper/Lower mit zwei Varianten. 4 Tage pro Woche, jeder Muskel zweimal.',
+    tpls: [
+      ['Oberkörper A', [['Bankdrücken (Langhantel)', 4, '6-8'], ['Langhantelrudern', 4, '6-8'], ['Schulterdrücken (Kurzhantel)', 3, '8-10'], ['Latziehen', 3, '8-10'], ['Langhantel-Curls', 2, '10-12'], ['Trizepsdrücken am Kabel', 2, '10-12']]],
+      ['Unterkörper A', [['Kniebeugen', 4, '6-8'], ['Rumänisches Kreuzheben', 3, '8-10'], ['Beinpresse', 3, '10-12'], ['Beinbeuger liegend', 3, '10-12'], ['Wadenheben stehend', 4, '12-15']]],
+      ['Oberkörper B', [['Schrägbankdrücken (Kurzhantel)', 4, '8-10'], ['Klimmzüge', 4, '6-10'], ['Military Press (Langhantel)', 3, '6-8'], ['Kabelrudern sitzend', 3, '10-12'], ['Seitheben', 3, '12-15'], ['Hammer Curls', 2, '10-12'], ['Overhead Trizeps-Extension', 2, '10-12']]],
+      ['Unterkörper B', [['Kreuzheben', 3, '5'], ['Bulgarian Split Squats', 3, '8-10'], ['Hip Thrust', 3, '8-12'], ['Beinstrecker', 3, '12-15'], ['Wadenheben stehend', 4, '12-15']]]
+    ]
+  },
+  {
+    key: 'torsolimbs', name: 'Torso / Limbs', days: 2,
+    desc: 'Rumpf (Brust, Rücken, Schultern) und Gliedmaßen (Beine, Arme). Gut für 4 Tage pro Woche.',
+    tpls: [
+      ['Torso', [['Bankdrücken (Langhantel)', 4, '6-8'], ['Langhantelrudern', 4, '6-8'], ['Schrägbankdrücken (Kurzhantel)', 3, '8-10'], ['Latziehen', 3, '10-12'], ['Schulterdrücken (Kurzhantel)', 3, '8-10'], ['Seitheben', 3, '12-15'], ['Face Pulls', 2, '15']]],
+      ['Limbs', [['Kniebeugen', 4, '6-8'], ['Rumänisches Kreuzheben', 3, '8-10'], ['Beinpresse', 3, '10-12'], ['Langhantel-Curls', 3, '8-10'], ['Trizepsdrücken am Kabel', 3, '10-12'], ['Hammer Curls', 2, '10-12'], ['Wadenheben stehend', 3, '12-15']]]
+    ]
+  },
+  {
+    key: 'fullbody', name: 'Ganzkörper', days: 3,
+    desc: 'Drei abwechselnde Ganzkörper-Tage. Perfekt für Einsteiger oder wenig Zeit.',
+    tpls: [
+      ['Ganzkörper A', [['Kniebeugen', 3, '6-8'], ['Bankdrücken (Langhantel)', 3, '6-8'], ['Langhantelrudern', 3, '8-10'], ['Seitheben', 2, '12-15'], ['Langhantel-Curls', 2, '10-12']]],
+      ['Ganzkörper B', [['Kreuzheben', 3, '5'], ['Schulterdrücken (Kurzhantel)', 3, '8-10'], ['Klimmzüge', 3, '6-10'], ['Beinpresse', 3, '10-12'], ['Trizepsdrücken am Kabel', 2, '10-12']]],
+      ['Ganzkörper C', [['Rumänisches Kreuzheben', 3, '8-10'], ['Schrägbankdrücken (Kurzhantel)', 3, '8-10'], ['Kabelrudern sitzend', 3, '10-12'], ['Ausfallschritte', 2, '10'], ['Hammer Curls', 2, '10-12']]]
+    ]
+  },
+  {
+    key: 'bro', name: 'Bro-Split', days: 5,
+    desc: 'Jeden Tag eine Muskelgruppe: Brust, Rücken, Schultern, Arme, Beine. 5 Tage pro Woche.',
+    tpls: [
+      ['Brust', [['Bankdrücken (Langhantel)', 4, '6-8'], ['Schrägbankdrücken (Kurzhantel)', 3, '8-10'], ['Dips', 3, '8-12'], ['Butterfly (Maschine)', 3, '12-15'], ['Kabelzug-Crossover', 3, '12-15']]],
+      ['Rücken', [['Kreuzheben', 3, '5'], ['Klimmzüge', 3, '6-10'], ['Langhantelrudern', 3, '8-10'], ['Latziehen', 3, '10-12'], ['Kurzhantelrudern einarmig', 3, '10-12']]],
+      ['Schultern', [['Military Press (Langhantel)', 4, '6-8'], ['Arnold Press', 3, '8-12'], ['Seitheben', 4, '12-15'], ['Reverse Flys', 3, '12-15'], ['Shrugs', 3, '10-12']]],
+      ['Arme', [['Langhantel-Curls', 3, '8-10'], ['French Press (SZ)', 3, '8-10'], ['Hammer Curls', 3, '10-12'], ['Trizepsdrücken am Kabel', 3, '10-12'], ['Preacher Curls (SZ)', 3, '10-12'], ['Overhead Trizeps-Extension', 3, '10-12']]],
+      ['Beine', [['Kniebeugen', 4, '6-8'], ['Beinpresse', 3, '10-12'], ['Rumänisches Kreuzheben', 3, '8-10'], ['Beinstrecker', 3, '12-15'], ['Beinbeuger liegend', 3, '10-12'], ['Wadenheben stehend', 4, '12-15']]]
+    ]
+  },
+  {
+    key: 'ppl6', name: 'Push / Pull / Legs (6 Tage)', days: 6,
+    desc: 'PPL mit A- und B-Tagen für mehr Abwechslung. 6 Tage pro Woche, für Fortgeschrittene.',
+    tpls: [
+      ['Push A', [['Bankdrücken (Langhantel)', 4, '5-8'], ['Schulterdrücken (Kurzhantel)', 3, '8-10'], ['Schrägbankdrücken (Kurzhantel)', 3, '8-10'], ['Seitheben', 3, '12-15'], ['Trizepsdrücken am Kabel', 3, '10-12']]],
+      ['Pull A', [['Kreuzheben', 3, '5'], ['Klimmzüge', 3, '6-10'], ['Kabelrudern sitzend', 3, '10-12'], ['Face Pulls', 3, '15'], ['Langhantel-Curls', 3, '8-12']]],
+      ['Legs A', [['Kniebeugen', 4, '5-8'], ['Beinpresse', 3, '10-12'], ['Beinbeuger liegend', 3, '10-12'], ['Wadenheben stehend', 4, '12-15']]],
+      ['Push B', [['Military Press (Langhantel)', 4, '6-8'], ['Kurzhantel-Bankdrücken', 3, '8-10'], ['Dips', 3, '8-12'], ['Seitheben', 3, '12-15'], ['Overhead Trizeps-Extension', 3, '10-12']]],
+      ['Pull B', [['Langhantelrudern', 4, '6-8'], ['Latziehen', 3, '10-12'], ['Kurzhantelrudern einarmig', 3, '10-12'], ['Reverse Flys', 3, '12-15'], ['Hammer Curls', 3, '10-12']]],
+      ['Legs B', [['Rumänisches Kreuzheben', 4, '6-8'], ['Bulgarian Split Squats', 3, '8-10'], ['Beinstrecker', 3, '12-15'], ['Hip Thrust', 3, '8-12'], ['Wadenheben stehend', 4, '12-15']]]
+    ]
+  }
+];
