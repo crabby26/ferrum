@@ -11,6 +11,9 @@ const ACTIVITY = [
   [1.9, 'Extrem aktiv (körperliche Arbeit + Training)']
 ];
 const GOALS = [['bulk', 'Muskelaufbau'], ['keep', 'Halten'], ['cut', 'Diät']];
+// Öffentlicher Schlüssel für Web-Push (der private liegt nur als Secret bei GitHub)
+const PUSH_PUBLIC_KEY = 'BLJcR8jlFdX-LbsExB6DtqSAlCuRnJ9dDUEnqIOH8HYxCq-8k8hgq7nZOFdiJuSfQYRrag2jkktWhPpGPiM21mA';
+
 // Apple-Systemfarben. Pink, Grün, Gelb und Cyan sind für Protein, Kohlenhydrate, Fett und Wasser reserviert.
 const ACCENTS = [
   ['blue', 'Blau', '#0A84FF'],
@@ -88,8 +91,10 @@ const Settings = {
           <div style="flex:1"><b>Haptisches Feedback</b><div class="hint" style="margin:2px 0 0">Kurzes Klopfen beim Abhaken und Eintragen (ab iOS 18).</div></div>
           <label class="switch"><input type="checkbox" data-set="haptics" ${st.haptics !== false ? 'checked' : ''}><i></i></label>
         </div>
-        <button class="btn block" data-act="test-sound" style="margin-top:12px">Ton testen</button>
       </div>
+
+      <div class="section-title">Mitteilungen</div>
+      <div class="card" id="push-card"><div class="hint">…</div></div>
 
       <div class="section-title">Daten & Backup</div>
       <div class="card">
@@ -109,19 +114,60 @@ const Settings = {
       <div class="section-title">App</div>
       <div class="list">
         <div class="list-item"><div class="li-main"><div class="li-title">Version</div></div><div class="li-end" id="app-version" style="color:var(--muted)">…</div></div>
-        <div class="list-item"><div class="li-main"><div class="li-title">Speicher geschützt</div><div class="li-sub">iOS löscht die Daten nicht automatisch</div></div><div class="li-end" id="app-persist" style="color:var(--muted)">…</div></div>
         <button class="list-item" data-act="check-update"><div class="li-main"><div class="li-title" style="color:var(--accent)">Nach Updates suchen</div></div></button>
       </div>
       <p class="hint" style="text-align:center;margin:22px 0 0"><span style="font-family:var(--font-display);font-weight:700;font-size:17px;letter-spacing:-.02em;color:var(--text)">Ferrum</span><br>Ohne Konto, ohne Werbung, ohne Tracking.<br>Lebensmitteldaten online: Open Food Facts (ODbL)</p>
     `;
     Settings.drawCalc();
     Settings.appInfo();
+    Settings.drawPush();
+  },
+
+  /* ---------- Morgen-Mitteilung (Web-Push) ---------- */
+  pushSupported() {
+    return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+  },
+  async pushReg() {
+    return App.reg || (await navigator.serviceWorker.getRegistration()) || null;
+  },
+  async drawPush() {
+    const box = $('#push-card');
+    if (!box) return;
+    const title = '<div class="card-title">Morgen-Erinnerung um 7 Uhr</div><p class="hint" style="margin:4px 0 12px">Jeden Morgen eine Mitteilung, welcher Tag deines Splits heute dran ist. Berechnet wird das auf deinem iPhone, deine Daten verlassen es nicht.</p>';
+    if (!Settings.pushSupported()) {
+      box.innerHTML = title + '<p class="hint" style="margin:0">Funktioniert nur in der installierten App (Safari → Teilen → „Zum Home-Bildschirm“), ab iOS 16.4.</p>';
+      return;
+    }
+    if (Notification.permission === 'denied') {
+      box.innerHTML = title + '<p class="hint" style="margin:0">Mitteilungen sind blockiert. Erlaube sie in den iPhone-Einstellungen unter Mitteilungen → Ferrum.</p>';
+      return;
+    }
+    let sub = null;
+    try { const reg = await Settings.pushReg(); sub = reg ? await reg.pushManager.getSubscription() : null; } catch (e) { sub = null; }
+    if (!sub) {
+      box.innerHTML = title + '<button class="btn primary block" data-act="push-on">Mitteilungen aktivieren</button>';
+      return;
+    }
+    const code = JSON.stringify(sub);
+    const confirmed = S.meta.pushConfirmed === code;
+    box.innerHTML = title + `
+      <div class="push-state on" style="margin-bottom:12px"><i class="dot"></i><b style="font-weight:600">${confirmed ? 'Aktiv' : 'Fast fertig'}</b></div>
+      ${confirmed ? '' : `<p class="hint" style="margin:0">Letzter Schritt: GitHub braucht diesen Code, um dein iPhone zu erreichen. Kopiere ihn und schick ihn an Claude, oder trag ihn selbst bei GitHub als Secret <b>PUSH_SUBSCRIPTION</b> ein (Repository → Settings → Secrets and variables → Actions).</p>
+      <div class="code-box">${U.esc(code)}</div>
+      <div class="btn-row" style="margin-bottom:10px"><button class="btn" data-act="push-copy">Code kopieren</button><button class="btn" data-act="push-done">Erledigt</button></div>`}
+      <div class="btn-row"><button class="btn" data-act="push-test">Test-Mitteilung</button><button class="btn danger" data-act="push-off">Ausschalten</button></div>`;
+    box.dataset.code = code;
+  },
+  b64ToBytes(s) {
+    const pad = '='.repeat((4 - s.length % 4) % 4);
+    const b = atob((s + pad).replace(/-/g, '+').replace(/_/g, '/'));
+    return Uint8Array.from(b, c => c.charCodeAt(0));
   },
 
   drawCalc() {
     const out = $('#calc-out'); if (!out) return;
     const g = calcGoals(S.settings);
-    out.innerHTML = `<div style="background:var(--bg3);border-radius:16px;padding:14px;margin-top:4px">
+    out.innerHTML = `<div style="background:rgba(255,255,255,.06);border:.5px solid rgba(255,255,255,.08);border-radius:18px;padding:14px;margin-top:4px">
       <div class="card-sub">Grundumsatz ${U.n(g.bmr)} kcal, Gesamtumsatz ${U.n(g.tdee)} kcal. Vorschlag:</div>
       <div class="food-macros" style="grid-template-columns:repeat(4,1fr);margin:10px 0 12px">
         <div><b>${U.n(g.kcal)}</b><span>kcal</span></div>
@@ -275,6 +321,50 @@ const Settings = {
       'backup': () => Settings.exportBackup(),
       'restore': () => $('#restore-file').click(),
       'csv': () => Settings.exportCSV(),
+      'push-on': async () => {
+        try {
+          const perm = await Notification.requestPermission();
+          if (perm !== 'granted') { Settings.drawPush(); return; }
+          const reg = await navigator.serviceWorker.ready;
+          await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: Settings.b64ToBytes(PUSH_PUBLIC_KEY) });
+          U.haptic();
+          U.toast('Mitteilungen aktiviert', 'ok');
+        } catch (e) {
+          U.toast('Aktivieren fehlgeschlagen: ' + (e.message || e), 'err');
+        }
+        Settings.drawPush();
+      },
+      'push-copy': async () => {
+        const code = $('#push-card').dataset.code || '';
+        try { await navigator.clipboard.writeText(code); U.toast('Code kopiert', 'ok'); }
+        catch (e) {
+          const r = document.createRange(); const b = $('#push-card .code-box');
+          if (b) { r.selectNodeContents(b); const s = getSelection(); s.removeAllRanges(); s.addRange(r); }
+          U.toast('Code markiert – tippe auf „Kopieren“');
+        }
+      },
+      'push-done': () => {
+        S.meta.pushConfirmed = $('#push-card').dataset.code || '';
+        Store.saveKV('meta');
+        Settings.drawPush();
+      },
+      'push-test': async () => {
+        const reg = await Settings.pushReg();
+        const sw = reg && (reg.active || navigator.serviceWorker.controller);
+        if (!sw) { U.toast('Service Worker noch nicht bereit – App neu öffnen', 'err'); return; }
+        sw.postMessage({ type: 'TEST_PUSH' });
+        U.toast('Test-Mitteilung gesendet');
+      },
+      'push-off': async () => {
+        try {
+          const reg = await Settings.pushReg();
+          const sub = reg && await reg.pushManager.getSubscription();
+          if (sub) await sub.unsubscribe();
+        } catch (e) { /* egal */ }
+        S.meta.pushConfirmed = null; Store.saveKV('meta');
+        U.toast('Mitteilungen ausgeschaltet');
+        Settings.drawPush();
+      },
       'set-accent': btn => {
         S.settings.accent = btn.dataset.v;
         Store.saveKV('settings');

@@ -59,8 +59,8 @@ const BASIC_RAW = [
   ['Griechischer Joghurt 10 %', 125, 5, 4, 10, 'Portion:150', 'Eier & Milchprodukte'],
   ['Naturjoghurt 1,5 %', 46, 3.8, 4.7, 1.5, 'Becher:150', 'Eier & Milchprodukte'],
   ['Naturjoghurt 3,5 %', 64, 3.8, 4.5, 3.5, 'Becher:150', 'Eier & Milchprodukte'],
-  ['Milch 1,5 %', 47, 3.4, 4.8, 1.5, 'Glas (250 ml):250', 'Eier & Milchprodukte'],
-  ['Milch 3,5 %', 64, 3.3, 4.8, 3.5, 'Glas (250 ml):250', 'Eier & Milchprodukte'],
+  ['Milch 1,5 %', 47, 3.4, 4.8, 1.5, 'Glas:250', 'Eier & Milchprodukte'],
+  ['Milch 3,5 %', 64, 3.3, 4.8, 3.5, 'Glas:250', 'Eier & Milchprodukte'],
   ['Körniger Frischkäse', 98, 12.5, 2, 4.3, 'Becher:200', 'Eier & Milchprodukte'],
   ['Frischkäse natur', 225, 5.4, 4, 21, 'EL:20', 'Eier & Milchprodukte'],
   ['Gouda', 360, 25, 0, 29, 'Scheibe:20', 'Eier & Milchprodukte'],
@@ -130,12 +130,23 @@ const BASIC_RAW = [
   ['Ketchup', 102, 1.2, 23, 0.1, 'EL:15', 'Snacks & Süßes'],
   ['Pizza Margherita (TK)', 240, 10, 30, 9, 'Pizza:350', 'Snacks & Süßes'],
   ['Pommes frites (zubereitet)', 290, 3.5, 36, 14, 'Portion:150', 'Snacks & Süßes'],
-  ['Cola', 42, 0, 10.6, 0, 'Dose (330 ml):330', 'Getränke'],
-  ['Cola Zero', 0.3, 0, 0, 0, 'Dose (330 ml):330', 'Getränke'],
-  ['Orangensaft', 45, 0.7, 10, 0.2, 'Glas (200 ml):200', 'Getränke'],
-  ['Hafermilch', 46, 1, 6.7, 1.5, 'Glas (250 ml):250', 'Getränke'],
-  ['Sojadrink ungesüßt', 33, 3.3, 0.2, 1.8, 'Glas (250 ml):250', 'Getränke'],
-  ['Bier (Pils)', 42, 0.5, 3, 0, 'Flasche (500 ml):500', 'Getränke'],
+  ['Wasser', 0, 0, 0, 0, 'Glas:250|Flasche:500', 'Getränke'],
+  ['Fanta Orange', 31, 0, 7.6, 0, 'Dose:330|Flasche:500', 'Getränke'],
+  ['Fanta Zero', 2, 0, 0.4, 0, 'Dose:330|Flasche:500', 'Getränke'],
+  ['Sprite', 19, 0, 4.6, 0, 'Dose:330|Flasche:500', 'Getränke'],
+  ['Apfelschorle', 24, 0, 5.5, 0, 'Glas:250|Flasche:500', 'Getränke'],
+  ['Apfelsaft', 46, 0.1, 11, 0.1, 'Glas:200', 'Getränke'],
+  ['Eistee Pfirsich', 19, 0, 4.5, 0, 'Flasche:500', 'Getränke'],
+  ['Energy Drink', 46, 0, 11, 0, 'Dose:250', 'Getränke'],
+  ['Energy Drink zuckerfrei', 3, 0, 0, 0, 'Dose:250', 'Getränke'],
+  ['Kaffee schwarz', 2, 0.2, 0.3, 0, 'Tasse:200', 'Getränke'],
+  ['Tee ungesüßt', 1, 0, 0.2, 0, 'Tasse:250', 'Getränke'],
+  ['Cola', 42, 0, 10.6, 0, 'Dose:330', 'Getränke'],
+  ['Cola Zero', 0.3, 0, 0, 0, 'Dose:330', 'Getränke'],
+  ['Orangensaft', 45, 0.7, 10, 0.2, 'Glas:200', 'Getränke'],
+  ['Hafermilch', 46, 1, 6.7, 1.5, 'Glas:250', 'Getränke'],
+  ['Sojadrink ungesüßt', 33, 3.3, 0.2, 1.8, 'Glas:250', 'Getränke'],
+  ['Bier (Pils)', 42, 0.5, 3, 0, 'Flasche:500', 'Getränke'],
   ['Kaffee mit Milch', 15, 1, 1.4, 0.6, 'Tasse:200', 'Getränke']
 ];
 
@@ -145,7 +156,9 @@ const BASIC_FOODS = BASIC_RAW.map(r => ({
   kcal: r[1], p: r[2], c: r[3], f: r[4],
   units: r[5] ? r[5].split('|').map(u => { const i = u.lastIndexOf(':'); return { n: u.slice(0, i), g: +u.slice(i + 1) }; }) : [],
   cat: r[6],
-  src: 'basic'
+  src: 'basic',
+  // Getränke und Milch zählen automatisch zum Wasser (Menge in ml)
+  liquid: r[6] === 'Getränke' || /^Milch /.test(r[0]) || undefined
 }));
 
 /* ---------- Übungen ---------- */

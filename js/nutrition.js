@@ -12,7 +12,7 @@ const MEALS = [
 ];
 const mealName = id => (MEALS.find(m => m.id === id) || {}).name || id;
 
-const OFF_FIELDS = 'code,product_name,product_name_de,generic_name,brands,nutriments,serving_quantity,serving_size';
+const OFF_FIELDS = 'code,product_name,product_name_de,generic_name,brands,nutriments,serving_quantity,serving_size,quantity,product_quantity_unit';
 
 const Nutri = {
   day: U.today(),
@@ -34,15 +34,50 @@ const Nutri = {
   macroInline(v) {
     return `<span class="macros-inline"><span><i class="dot p"></i>${Nutri.g(v.p)} g</span><span><i class="dot c"></i>${Nutri.g(v.c)} g</span><span><i class="dot f"></i>${Nutri.g(v.f)} g</span></span>`;
   },
+  unitOf(food) { return food && food.liquid ? 'ml' : 'g'; },
   amountLabel(e) {
     if (e.food && e.food.src === 'quick') return 'Schnell-Eintrag';
-    if (e.unit) return `${U.n(e.qty, 2)} × ${U.esc(e.unit.n)} (${U.n(e.grams)} g)`;
-    return `${U.n(e.grams)} g`;
+    const u = Nutri.unitOf(e.food);
+    if (e.unit) return `${U.n(e.qty, 2)} × ${U.esc(e.unit.n)} (${U.n(e.grams)} ${u})`;
+    return `${U.n(e.grams)} ${u}`;
   },
   snapshot(f) {
     const o = { id: f.id, name: f.name, brand: f.brand || '', kcal: +f.kcal || 0, p: +f.p || 0, c: +f.c || 0, f: +f.f || 0, units: (f.units || []).map(u => ({ n: u.n, g: +u.g })), src: f.src || 'custom' };
     if (f.barcode) o.barcode = f.barcode;
+    // Ältere Einträge kennen das Getränke-Kennzeichen noch nicht → bei Basics nachschlagen
+    const basic = f.src === 'basic' && !f.liquid ? BASIC_FOODS.find(b => b.id === f.id) : null;
+    if (f.liquid || (basic && basic.liquid)) o.liquid = true;
     return o;
+  },
+
+  /* Standardmenge: zuletzt gegessene Menge, sonst eine sinnvolle Portion in g/ml */
+  defaultGrams(food) {
+    const rec = S.meta.recents.find(r => r.id === food.id);
+    if (rec) {
+      if (rec.lastGrams > 0) return rec.lastGrams;
+      if (rec.lastQty > 0 && !rec.lastUnit) return rec.lastQty;
+      const u = rec.lastUnit && (food.units || []).find(x => x.n === rec.lastUnit);
+      if (u && rec.lastQty > 0) return Math.round(u.g * rec.lastQty * 10) / 10;
+    }
+    const units = food.units || [];
+    if (food.liquid) return units.length ? units[0].g : 250;
+    const u = units.find(x => !/^(EL|TL)$/.test(x.n));
+    return u ? u.g : 100;
+  },
+
+  /* Ein Tipp: sofort mit der gewohnten Menge eintragen */
+  instantAdd(food, meal, day) {
+    const grams = Nutri.defaultGrams(food);
+    const e = { id: U.uid(), date: day || U.today(), t: Date.now(), meal: meal || App.mealByTime(), food: Nutri.snapshot(food), grams, qty: grams, unit: null };
+    Store.put('entries', e);
+    Nutri.pushRecent(food, grams, null, grams);
+    U.haptic();
+    App.refresh();
+    U.toast(`${food.name}, ${U.n(grams)} ${Nutri.unitOf(food)} eingetragen`, 'ok', {
+      label: 'Rückgängig',
+      fn: () => { Store.del('entries', e.id); App.refresh(); }
+    });
+    return e;
   },
 
   /* ---------- Streak: Tage in Folge mit Einträgen ---------- */
@@ -56,20 +91,25 @@ const Nutri = {
   },
 
   /* ---------- Wasser ---------- */
-  water(day) { const w = S.water.find(x => x.id === day); return w ? w.ml : 0; },
+  // Getrunkenes = von Hand eingetragenes Wasser + alle Getränke aus dem Ernährungstagebuch
+  waterManual(day) { const w = S.water.find(x => x.id === day); return w ? w.ml : 0; },
+  drinksMl(day) { return S.entries.filter(e => e.date === day && e.food && e.food.liquid).reduce((a, e) => a + (+e.grams || 0), 0); },
+  water(day) { return Nutri.waterManual(day) + Nutri.drinksMl(day); },
   addWater(day, delta) {
-    const ml = Math.max(0, Nutri.water(day) + delta);
-    Store.put('water', { id: day, ml });
+    const cur = Nutri.waterManual(day);
+    if (delta < 0 && cur <= 0) { U.toast('Getränke aus der Ernährung löschst du dort'); return; }
+    Store.put('water', { id: day, ml: Math.max(0, cur + delta) });
   },
   waterCard(day) {
     const ml = Nutri.water(day);
+    const drinks = Nutri.drinksMl(day);
     const goal = S.settings.waterGoal || 3000;
     const glass = S.settings.glass || 250;
     const pct = U.clamp(ml / goal * 100, 0, 100);
     return `<div class="card">
       <div class="water">
         <div style="flex:1;min-width:0">
-          <div class="card-sub">Wasser</div>
+          <div class="card-sub">Getrunken${drinks ? `, davon ${U.n(drinks)} ml aus Getränken` : ''}</div>
           <div class="water-num">${U.n(ml / 1000, 2)} <small>/ ${U.n(goal / 1000, 1)} l</small></div>
         </div>
         <button class="icon-btn" data-act="water" data-day="${day}" data-d="-1" aria-label="${glass} ml entfernen">${U.icon.minus}</button>
@@ -86,9 +126,10 @@ const Nutri = {
     else S.meta.favs.unshift(Nutri.snapshot(food));
     Store.saveKV('meta');
   },
-  pushRecent(food, qty, unitName) {
+  pushRecent(food, qty, unitName, grams) {
     const s = Nutri.snapshot(food);
     s.lastQty = qty; s.lastUnit = unitName || null;
+    if (grams > 0) s.lastGrams = grams;
     S.meta.recents = [s].concat(S.meta.recents.filter(f => f.id !== food.id)).slice(0, 40);
     Store.saveKV('meta');
   },
@@ -109,7 +150,8 @@ const Nutri = {
       meals += `<div class="meal">
         <div class="meal-head">
           <div class="t"><b>${m.name}</b><div>${U.n(t.kcal)} kcal</div></div>
-          <button class="icon-btn plain" data-act="copy-meal" data-meal="${m.id}" aria-label="Von gestern kopieren">${U.icon.copy}</button>
+          ${!list.length && S.entries.some(e => e.date === U.addDays(day, -1) && e.meal === m.id)
+            ? `<button class="btn small" data-act="copy-meal" data-meal="${m.id}">Wie gestern</button>` : ''}
           <button class="icon-btn accent" data-act="add-food" data-meal="${m.id}" aria-label="Hinzufügen">${U.icon.plus}</button>
         </div>
         ${list.map(e => {
@@ -144,6 +186,7 @@ const Nutri = {
           <div><div class="mb-label">Fett <b>${U.n(tot.f)}/${st.fat}</b></div>${bar(tot.f, st.fat, 'var(--fat)')}</div>
         </div>
       </div>
+      ${Nutri.quickRow(day)}
       ${meals}
       ${Nutri.waterCard(day)}
     `;
@@ -151,6 +194,21 @@ const Nutri = {
     di.addEventListener('change', () => {
       if (di.value) { Nutri.day = di.value > U.today() ? U.today() : di.value; Nutri.render(); }
     });
+  },
+
+  /* Schnell-Leiste: zuletzt verwendete Sachen mit einem Tipp eintragen */
+  quickRow(day) {
+    const list = S.meta.recents.filter(f => f.src !== 'quick').slice(0, 10);
+    if (!list.length) return '';
+    return `<div class="quick-row">
+      <div class="quick-title">Mit einem Tipp</div>
+      <div class="chips">${list.map(f => {
+        const g = Nutri.defaultGrams(f);
+        return `<button class="quick-chip" data-act="instant" data-id="${U.esc(f.id)}" data-day="${day}">
+          <span class="qc-plus">${U.icon.plus}</span><span class="qc-name">${U.esc(f.name)}</span><span class="qc-amt">${U.n(g)} ${Nutri.unitOf(f)}</span>
+        </button>`;
+      }).join('')}</div>
+    </div>`;
   },
 
   copyMeal(meal) {
@@ -183,13 +241,13 @@ const Nutri = {
     const q = sh.$('#pk-q');
 
     const item = (f, i) => {
-      const sub = [f.brand, `${U.n(f.kcal)} kcal / 100 g`].filter(Boolean).map(U.esc).join(', ');
+      const sub = [f.brand, `${U.n(f.kcal)} kcal / 100 ${Nutri.unitOf(f)}`].filter(Boolean).map(U.esc).join(', ');
       const badge = f.src === 'recipe' ? '<span class="src-badge">Rezept</span>' : f.src === 'custom' ? '<span class="src-badge">Eigenes</span>' : '';
-      return `<button class="list-item" data-i="${i}">
+      const g = Nutri.defaultGrams(f);
+      return `<div class="list-item tap" data-i="${i}">
         <div class="li-main"><div class="li-title">${U.esc(f.name)}${badge}</div><div class="li-sub">${sub}</div></div>
-        ${Nutri.isFav(f.id) ? `<span style="color:var(--accent);width:18px">${U.icon.star.replace('<svg', '<svg style="width:18px;height:18px;fill:currentColor"')}</span>` : ''}
-        ${U.icon.chevron}
-      </button>`;
+        ${ctx.mode === 'pick' ? U.icon.chevron : `<button class="add-pill" data-add="${i}" aria-label="${U.esc(f.name)} mit ${U.n(g)} ${Nutri.unitOf(f)} eintragen">${U.icon.plus}<span>${U.n(g)} ${Nutri.unitOf(f)}</span></button>`}
+      </div>`;
     };
     const listHTML = (arr, empty) => {
       if (!arr.length) return `<div class="empty">${empty}</div>`;
@@ -203,7 +261,6 @@ const Nutri = {
         <div class="seg">${tabs.map(t => `<button data-tab="${t[0]}" class="${st.tab === t[0] ? 'on' : ''}">${t[1]}</button>`).join('')}</div>
         <div class="chips" style="margin-bottom:12px">
           ${ctx.mode === 'pick' ? '' : '<button class="chip" data-a="quick">Schnell eintragen</button>'}
-          <button class="chip" data-a="manual">Barcode eintippen</button>
           <button class="chip" data-a="new-food">+ Eigenes Lebensmittel</button>
           ${ctx.mode === 'pick' ? '' : '<button class="chip" data-a="new-recipe">+ Rezept</button>'}
         </div>`;
@@ -274,6 +331,13 @@ const Nutri = {
     }));
 
     sh.body.addEventListener('click', e => {
+      const add = e.target.closest('[data-add]');
+      if (add) {
+        Nutri.instantAdd(st.shown[+add.dataset.add], ctx.meal, ctx.day);
+        add.classList.add('done');
+        setTimeout(() => { if (!sh.closed) drawList(); }, 500);
+        return;
+      }
       const t = e.target.closest('[data-tab],[data-i],[data-a]');
       if (!t) return;
       if (t.dataset.tab) { st.tab = t.dataset.tab; drawTop(); drawList(); return; }
@@ -348,7 +412,9 @@ const Nutri = {
       f: Math.round((+n.fat_100g || 0) * 10) / 10,
       units,
       src: 'off',
-      barcode: String(p.code || '')
+      barcode: String(p.code || ''),
+      // Getränk, wenn die Packungsgröße in ml/l angegeben ist
+      liquid: p.product_quantity_unit === 'ml' || /\d\s*(ml|cl|l)\b/i.test(String(p.quantity || '')) || undefined
     };
   },
 
@@ -403,21 +469,10 @@ const Nutri = {
   /* ---------- Lebensmittel-Detail (Menge wählen) ---------- */
   openFood(food, ctx) {
     const entry = ctx.entry || null;
+    // Menge immer frei in Gramm bzw. ml – Portionen sind nur Schnellknöpfe
     const units = food.units || [];
-    let unitSel = 'g', qty = 100;
-    if (entry) {
-      const ui = entry.unit ? units.findIndex(u => u.n === entry.unit.n) : -1;
-      if (entry.unit && ui >= 0) { unitSel = String(ui); qty = entry.qty; } else { unitSel = 'g'; qty = entry.grams; }
-    } else {
-      const rec = S.meta.recents.find(r => r.id === food.id);
-      if (rec && rec.lastQty) {
-        const ui = rec.lastUnit ? units.findIndex(u => u.n === rec.lastUnit) : -1;
-        if (rec.lastUnit && ui >= 0) { unitSel = String(ui); qty = rec.lastQty; } else if (!rec.lastUnit) { unitSel = 'g'; qty = rec.lastQty; }
-      } else {
-        const ui = units.findIndex(u => !/^(EL|TL)$/.test(u.n));
-        if (ui >= 0) { unitSel = String(ui); qty = 1; }
-      }
-    }
+    const unitTxt = Nutri.unitOf(food);
+    const qty = entry ? entry.grams : Nutri.defaultGrams(food);
     let meal = entry ? entry.meal : (ctx.meal || 'snacks');
     const editable = S.foods.some(f => f.id === food.id);
     const mode = entry ? 'edit' : ctx.mode === 'pick' ? 'pick' : 'log';
@@ -426,7 +481,7 @@ const Nutri = {
     const head = `${editable ? `<button class="icon-btn plain" data-a="editfood" aria-label="Bearbeiten">${U.icon.edit}</button>` : ''}
       <button class="icon-btn plain" data-a="fav" style="color:var(--accent)" aria-label="Favorit">${starSvg(Nutri.isFav(food.id))}</button>`;
 
-    const per = `${U.n(food.kcal)} kcal, ${Nutri.g(food.p)} g Protein, ${Nutri.g(food.c)} g Kohlenhydrate, ${Nutri.g(food.f)} g Fett je 100 g`;
+    const per = `${U.n(food.kcal)} kcal, ${Nutri.g(food.p)} g Protein, ${Nutri.g(food.c)} g Kohlenhydrate, ${Nutri.g(food.f)} g Fett je 100 ${unitTxt}`;
     const sh = U.sheet({
       title: U.esc(food.name),
       headRight: head,
@@ -438,14 +493,14 @@ const Nutri = {
           <div class="c"><b id="fd-c">0</b><span>Kohlenh. (g)</span></div>
           <div class="f"><b id="fd-f">0</b><span>Fett (g)</span></div>
         </div>
-        <div class="amount-row">
-          <input class="input" id="fd-qty" inputmode="decimal" autocomplete="off" value="${U.n(qty, 2).replace(/\./g, '')}">
-          <select class="input" id="fd-unit">
-            <option value="g">Gramm</option>
-            ${units.map((u, i) => `<option value="${i}">${U.esc(u.n)} (${U.n(u.g, 1)} g)</option>`).join('')}
-          </select>
+        <label class="amount-field">
+          <input id="fd-qty" inputmode="decimal" autocomplete="off" value="${U.n(qty, 1).replace(/\./g, '')}" aria-label="Menge in ${unitTxt}">
+          <span>${unitTxt}</span>
+        </label>
+        <div class="chips" id="fd-quick" style="margin-top:12px">
+          ${units.map(u => `<button class="chip" data-q="${u.g}">${U.esc(u.n)} ${U.n(u.g, 1)} ${unitTxt}</button>`).join('')}
+          ${(food.liquid ? [200, 250, 330, 500] : [50, 100, 150, 200]).map(o => `<button class="chip" data-q="${o}">${o} ${unitTxt}</button>`).join('')}
         </div>
-        <div class="chips" id="fd-quick" style="margin-top:10px"></div>
         ${mode !== 'pick' ? `<div class="section-title" style="font-size:15px;margin:18px 2px 8px;color:var(--muted)">Mahlzeit</div>
         <div class="chips wrap" id="fd-meal">${MEALS.map(m => `<button class="chip ${m.id === meal ? 'on' : ''}" data-meal="${m.id}">${m.name}</button>`).join('')}</div>` : ''}
         <p class="hint" style="margin-top:16px">${per}</p>`,
@@ -453,13 +508,11 @@ const Nutri = {
         ? `<div class="btn-row"><button class="btn danger" data-a="del">Löschen</button><button class="btn primary" data-a="save" style="flex:2">Speichern</button></div>`
         : `<button class="btn primary block" data-a="save">${mode === 'pick' ? 'Als Zutat übernehmen' : 'Hinzufügen'}</button>`
     });
-    const qIn = sh.$('#fd-qty'), uIn = sh.$('#fd-unit');
-    uIn.value = unitSel;
+    const qIn = sh.$('#fd-qty');
 
     const grams = () => {
       const q = U.parseNum(qIn.value);
-      if (isNaN(q) || q <= 0) return 0;
-      return uIn.value === 'g' ? q : q * units[+uIn.value].g;
+      return isNaN(q) || q <= 0 ? 0 : q;
     };
     const upd = () => {
       const v = Nutri.calc(food, grams());
@@ -468,17 +521,9 @@ const Nutri = {
       sh.$('#fd-c').textContent = Nutri.g(v.c);
       sh.$('#fd-f').textContent = Nutri.g(v.f);
     };
-    const quick = () => {
-      const opts = uIn.value === 'g' ? [50, 100, 150, 200, 250] : [0.5, 1, 1.5, 2, 3];
-      sh.$('#fd-quick').innerHTML = opts.map(o => `<button class="chip" data-q="${o}">${U.n(o, 1)}${uIn.value === 'g' ? ' g' : ''}</button>`).join('');
-    };
     qIn.addEventListener('input', upd);
     qIn.addEventListener('focus', () => qIn.select());
-    uIn.addEventListener('change', () => {
-      qIn.value = uIn.value === 'g' ? '100' : '1';
-      quick(); upd();
-    });
-    quick(); upd();
+    upd();
 
     sh.el.addEventListener('click', e => {
       const t = e.target.closest('[data-q],[data-meal],[data-a]');
@@ -512,8 +557,6 @@ const Nutri = {
       if (a === 'save') {
         const g = grams();
         if (!g) { U.toast('Bitte eine Menge eingeben', 'err'); qIn.focus(); return; }
-        const q = U.parseNum(qIn.value);
-        const unit = uIn.value === 'g' ? null : units[+uIn.value];
         if (mode === 'pick') {
           sh.close();
           if (ctx.picker) ctx.picker.close();
@@ -521,12 +564,12 @@ const Nutri = {
           return;
         }
         const e2 = entry ? Object.assign({}, entry) : { id: U.uid(), date: ctx.day || Nutri.day, t: Date.now(), food: Nutri.snapshot(food) };
-        e2.meal = meal; e2.grams = Math.round(g * 10) / 10; e2.qty = unit ? q : e2.grams; e2.unit = unit ? { n: unit.n, g: unit.g } : null;
+        e2.meal = meal; e2.grams = Math.round(g * 10) / 10; e2.qty = e2.grams; e2.unit = null;
         Store.put('entries', e2);
-        Nutri.pushRecent(food, unit ? q : e2.grams, unit ? unit.n : null);
+        Nutri.pushRecent(food, e2.grams, null, e2.grams);
         U.haptic();
         sh.close();
-        U.toast(entry ? 'Gespeichert' : `${food.name} hinzugefügt`, 'ok');
+        U.toast(entry ? 'Gespeichert' : `${food.name}, ${U.n(e2.grams)} ${unitTxt} eingetragen`, 'ok');
         if (ctx.after) ctx.after();
         App.refresh();
       }
@@ -619,6 +662,10 @@ const Nutri = {
           <label class="field"><span>Kohlenhydrate (g)</span><input class="input num" id="cf-c" inputmode="decimal" value="${v(f.c)}"></label>
           <label class="field"><span>Fett (g)</span><input class="input num" id="cf-f" inputmode="decimal" value="${v(f.f)}"></label>
         </div>
+        <div style="display:flex;align-items:center;gap:12px;margin:14px 2px 4px">
+          <div style="flex:1"><b style="font-weight:500">Getränk</b><div class="hint" style="margin:2px 0 0">Menge in ml, zählt zum Wasser</div></div>
+          <label class="switch"><input type="checkbox" id="cf-liq" ${f.liquid ? 'checked' : ''}><i></i></label>
+        </div>
         <label class="field" style="margin-top:12px"><span>Barcode (optional)</span><input class="input num" id="cf-bc" inputmode="numeric" value="${U.esc(f.barcode || '')}"></label>
         ${isEdit ? '<button class="btn danger block" data-a="del" style="margin-top:8px">Lebensmittel löschen</button>' : ''}`,
       foot: `<button class="btn primary block" data-a="save">Speichern</button>`
@@ -663,13 +710,15 @@ const Nutri = {
         kcal: r1(kcal), p: r1(p), c: r1(c), f: r1(fat),
         units: ug > 0 ? [{ n: un || 'Portion', g: ug }] : [],
         src: 'custom',
-        barcode: sh.$('#cf-bc').value.replace(/\D/g, '') || undefined
+        barcode: sh.$('#cf-bc').value.replace(/\D/g, '') || undefined,
+        liquid: sh.$('#cf-liq').checked || undefined
       };
       if (!food.barcode) delete food.barcode;
+      if (!food.liquid) delete food.liquid;
       Store.put('foods', food);
       // Kopien in Favoriten/Zuletzt aktualisieren
       ['favs', 'recents'].forEach(k => {
-        S.meta[k] = S.meta[k].map(x => x.id === food.id ? Object.assign(Nutri.snapshot(food), { lastQty: x.lastQty, lastUnit: x.lastUnit }) : x);
+        S.meta[k] = S.meta[k].map(x => x.id === food.id ? Object.assign(Nutri.snapshot(food), { lastQty: x.lastQty, lastUnit: x.lastUnit, lastGrams: x.lastGrams }) : x);
       });
       Store.saveKV('meta');
       sh.close();
@@ -767,7 +816,7 @@ const Nutri = {
         };
         Store.put('foods', food);
         ['favs', 'recents'].forEach(k => {
-          S.meta[k] = S.meta[k].map(x => x.id === food.id ? Object.assign(Nutri.snapshot(food), { lastQty: x.lastQty, lastUnit: x.lastUnit }) : x);
+          S.meta[k] = S.meta[k].map(x => x.id === food.id ? Object.assign(Nutri.snapshot(food), { lastQty: x.lastQty, lastUnit: x.lastUnit, lastGrams: x.lastGrams }) : x);
         });
         Store.saveKV('meta');
         sh.close();

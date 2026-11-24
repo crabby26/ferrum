@@ -127,6 +127,7 @@ const App = {
         </div>
       </div>
       <button class="btn primary block" data-act="quick-add" style="margin:18px 0 12px">${U.icon.plus} Essen eintragen</button>
+      ${Nutri.quickRow(day)}
       ${train}
       ${Nutri.waterCard(day)}
       ${streak.n && !streak.today ? `<p class="hint" style="text-align:center">Trag heute etwas ein, damit deine Serie von ${streak.n} ${streak.n === 1 ? 'Tag' : 'Tagen'} weiterläuft.</p>` : ''}
@@ -193,6 +194,10 @@ const App = {
     Object.assign(App.actions, {
       'go': el => App.go(el.dataset.tab),
       'quick-add': () => Nutri.openPicker({ mode: 'log', meal: App.mealByTime(), day: U.today() }),
+      'instant': el => {
+        const f = S.meta.recents.find(r => r.id === el.dataset.id);
+        if (f) Nutri.instantAdd(f, el.dataset.day === U.today() ? App.mealByTime() : 'snacks', el.dataset.day);
+      },
       'add-food': el => Nutri.openPicker({ mode: 'log', meal: el.dataset.meal, day: Nutri.day }),
       'copy-meal': el => Nutri.copyMeal(el.dataset.meal),
       'edit-entry': el => Nutri.editEntry(el.dataset.id),
@@ -242,8 +247,6 @@ const App = {
     App.updateBackupDot();
     if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
     App.registerSW();
-    const sp = $('#splash');
-    if (sp) setTimeout(() => { sp.classList.add('out'); setTimeout(() => { sp.hidden = true; }, 600); }, 450);
   }
 };
 

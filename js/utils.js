@@ -239,12 +239,26 @@ const U = {
   },
 
   /* ---------- Toasts ---------- */
-  toast(msg, type) {
+  // action: { label, fn } zeigt einen Knopf im Toast, z. B. „Rückgängig“
+  toast(msg, type, action) {
     const t = document.createElement('div');
-    t.className = 'toast' + (type ? ' ' + type : '');
-    t.textContent = msg;
-    $('#toasts').appendChild(t);
-    setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 320); }, type === 'err' ? 3800 : 2400);
+    t.className = 'toast' + (type ? ' ' + type : '') + (action ? ' has-action' : '');
+    const span = document.createElement('span');
+    span.textContent = msg;
+    t.appendChild(span);
+    let used = false;
+    if (action) {
+      const b = document.createElement('button');
+      b.className = 'toast-btn';
+      b.textContent = action.label;
+      b.onclick = () => { if (used) return; used = true; action.fn(); t.classList.add('out'); setTimeout(() => t.remove(), 320); };
+      t.appendChild(b);
+    }
+    // höchstens 3 Meldungen gleichzeitig
+    const box = $('#toasts');
+    box.appendChild(t);
+    while (box.children.length > 3) box.firstElementChild.remove();
+    setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 320); }, type === 'err' ? 3800 : action ? 4500 : 2400);
   },
 
   /* ---------- Ton (Web Audio) ---------- */

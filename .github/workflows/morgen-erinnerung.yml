@@ -1,0 +1,64 @@
+# Ferrum – Morgen-Erinnerung
+# Schickt jeden Morgen um ca. 7 Uhr (deutsche Zeit) ein Signal an dein iPhone.
+# Welcher Split-Tag dran ist, berechnet die App selbst auf dem iPhone.
+#
+# Benötigte Secrets (Repository → Settings → Secrets and variables → Actions):
+#   VAPID_PRIVATE_KEY   – privater Schlüssel (einmalig eingerichtet)
+#   PUSH_SUBSCRIPTION   – Code aus Ferrum → Einstellungen → Mitteilungen
+#
+# Von Hand testen: Actions → „Morgen-Erinnerung“ → „Run workflow“.
+
+name: Morgen-Erinnerung
+
+on:
+  schedule:
+    # GitHub rechnet in UTC: 5 Uhr UTC = 7 Uhr Sommerzeit, 6 Uhr UTC = 7 Uhr Winterzeit.
+    # Das Skript sendet nur bei dem Lauf, der in Deutschland 7 Uhr trifft.
+    - cron: '0 5 * * *'
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: morgen-erinnerung
+  cancel-in-progress: false
+
+jobs:
+  senden:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Web-Push-Bibliothek installieren
+        working-directory: .github/push
+        run: npm install --no-save --no-package-lock --no-audit --no-fund web-push@3.6.7
+
+      - name: Signal senden
+        working-directory: .github/push
+        env:
+          VAPID_PUBLIC_KEY: BLJcR8jlFdX-LbsExB6DtqSAlCuRnJ9dDUEnqIOH8HYxCq-8k8hgq7nZOFdiJuSfQYRrag2jkktWhPpGPiM21mA
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+          PUSH_SUBSCRIPTION: ${{ secrets.PUSH_SUBSCRIPTION }}
+          FORCE: ${{ github.event_name == 'workflow_dispatch' }}
+        run: node send.mjs
+
+      # GitHub pausiert Zeitpläne in Repositories ohne Aktivität nach 60 Tagen.
+      # Ein leerer Commit alle ~45 Tage hält die Erinnerung am Leben.
+      - name: Zeitplan aktiv halten
+        if: github.event_name == 'schedule'
+        run: |
+          last=$(git log -1 --format=%ct)
+          now=$(date +%s)
+          if [ $(( (now - last) / 86400 )) -ge 45 ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit --allow-empty -m "Zeitplan aktiv halten"
+            git push
+          fi

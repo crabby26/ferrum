@@ -905,3 +905,160 @@ body::before { display: none; }
 /* Farbauswahl */
 .accent-dot { width: 40px; height: 40px; }
 .accent-dot.on { outline-color: #FFFFFF; }
+
+/* =========================================================
+   Liquid-Glass-Ebene (Ferrum 4.0)
+   Durchscheinende Flächen mit Lichtkante über einem sanften
+   Farbschimmer im Hintergrund. Echte Unschärfe (backdrop-filter)
+   nur bei Leisten, Knöpfen und Sheets – das bleibt flüssig.
+   ========================================================= */
+:root {
+  --glass-bg: linear-gradient(180deg, rgba(255, 255, 255, .085), rgba(255, 255, 255, .035));
+  --glass-edge: rgba(255, 255, 255, .12);
+  --glass-hi: inset 0 1px 0 rgba(255, 255, 255, .14), inset 0 -1px 0 rgba(255, 255, 255, .03);
+  --glass-ctrl: rgba(255, 255, 255, .1);
+  --blur: blur(28px) saturate(190%);
+}
+
+/* Farbschimmer hinter allem (folgt der Akzentfarbe) */
+body::before {
+  display: block; content: ""; position: fixed; inset: 0; pointer-events: none;
+  background:
+    radial-gradient(70% 45% at 10% -5%, var(--accent-soft), transparent 70%),
+    radial-gradient(55% 40% at 105% 35%, rgba(255, 55, 95, .10), transparent 70%),
+    radial-gradient(70% 45% at 20% 105%, rgba(100, 210, 255, .08), transparent 70%);
+}
+.workout-screen { background: #000; }
+.workout-screen::before {
+  content: ""; position: fixed; inset: 0; pointer-events: none; z-index: -1;
+  background: radial-gradient(70% 45% at 90% -5%, var(--accent-soft), transparent 70%);
+}
+
+/* Glasflächen */
+.card, .list, .meal, .sum-card, .next-card, .ex-card, .inline-banner, .day-label, .streak, .tile {
+  background: var(--glass-bg);
+  border: .5px solid var(--glass-edge);
+  box-shadow: var(--glass-hi), 0 10px 30px -12px rgba(0, 0, 0, .6);
+}
+.list-item + .list-item::before, .meal .list-item::before { background: rgba(255, 255, 255, .08); }
+.food-macros > div, .stat, .kpi { background: rgba(255, 255, 255, .06); border: .5px solid rgba(255, 255, 255, .07); }
+.sheet-body .list, .sheet-body .card { background: rgba(255, 255, 255, .06); border: .5px solid rgba(255, 255, 255, .08); box-shadow: var(--glass-hi); }
+
+/* Glas-Bedienelemente */
+.btn, .icon-btn, .chip, .seg, .input, select.input, .set-in, .set-check {
+  background: var(--glass-ctrl);
+  border: .5px solid rgba(255, 255, 255, .12);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .12);
+  -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur);
+}
+.sheet-body .input, .sheet-body select.input, .sheet-body .chip, .sheet-body .seg { background: rgba(255, 255, 255, .08); }
+.icon-btn.plain { background: transparent; border: 0; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+.input:focus, .set-in:focus { box-shadow: 0 0 0 2px var(--accent), inset 0 1px 0 rgba(255, 255, 255, .12); }
+
+/* Hervorgehobene Knöpfe: Akzent mit Glanz */
+.btn.primary, .chip.on, .sheet-body .chip.on, .icon-btn.accent, .workout-pill, .toast.ok, .pr-pop {
+  background: linear-gradient(180deg, rgba(255, 255, 255, .3), rgba(255, 255, 255, 0) 55%), var(--accent);
+  color: var(--ink);
+  border: .5px solid rgba(255, 255, 255, .25);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .45), 0 10px 24px -12px var(--accent);
+}
+.btn.danger { background: rgba(255, 69, 58, .14); border-color: rgba(255, 69, 58, .25); }
+.meal-head .icon-btn.accent { background: var(--accent-soft); color: var(--accent); border-color: rgba(255, 255, 255, .1); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .12); }
+.set-row.done .set-check { background: linear-gradient(180deg, rgba(255, 255, 255, .3), rgba(255, 255, 255, 0) 55%), var(--ok); }
+
+/* Segment-Schalter: Glas-Schieber */
+.seg { padding: 3px; border-radius: 999px; }
+.seg button { border-radius: 999px; }
+.seg button.on, .sheet-body .seg button.on {
+  background: rgba(255, 255, 255, .2);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .25), 0 2px 8px rgba(0, 0, 0, .25);
+}
+
+/* Tab-Leiste: kräftigeres Glas, Glas-Pille für den aktiven Tab */
+.tabbar {
+  background: rgba(40, 40, 46, .42);
+  -webkit-backdrop-filter: blur(30px) saturate(200%); backdrop-filter: blur(30px) saturate(200%);
+  border: .5px solid rgba(255, 255, 255, .16);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .18), inset 0 -1px 0 rgba(255, 255, 255, .04), 0 16px 40px rgba(0, 0, 0, .55);
+}
+.tab.active { background: rgba(255, 255, 255, .13); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .16); }
+
+/* Sheets aus Glas */
+.sheet {
+  background: rgba(28, 28, 32, .78);
+  -webkit-backdrop-filter: blur(40px) saturate(180%); backdrop-filter: blur(40px) saturate(180%);
+  border-top: .5px solid rgba(255, 255, 255, .16);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .1);
+}
+.sheet-foot { background: transparent; }
+.backdrop { background: rgba(0, 0, 0, .35); }
+
+/* Glasleisten im Training, Meldungen */
+.ws-head, .rest-bar, .toast, .banner {
+  background: rgba(40, 40, 46, .5);
+  -webkit-backdrop-filter: blur(30px) saturate(200%); backdrop-filter: blur(30px) saturate(200%);
+  border: .5px solid rgba(255, 255, 255, .14);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .14), 0 10px 30px rgba(0, 0, 0, .4);
+}
+.ws-head { border-width: 0 0 .5px; }
+.rest-bar { border-width: .5px 0 0; }
+.toast { display: flex; align-items: center; gap: 12px; }
+.toast-btn { background: rgba(255, 255, 255, .18); color: inherit; font-weight: 600; font-size: 14px; border-radius: 999px; padding: 6px 12px; white-space: nowrap; }
+.toast.ok .toast-btn { background: rgba(0, 0, 0, .15); }
+
+/* Mengen-Eingabe: große Zahl mit Einheit */
+.amount-field {
+  display: flex; align-items: baseline; justify-content: center; gap: 8px;
+  padding: 12px 18px; border-radius: 22px;
+  background: rgba(255, 255, 255, .07); border: .5px solid rgba(255, 255, 255, .12);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .12);
+}
+.amount-field:focus-within { box-shadow: 0 0 0 2px var(--accent), inset 0 1px 0 rgba(255, 255, 255, .12); }
+.amount-field input {
+  width: 100%; min-width: 0; flex: 1; background: none; border: 0; outline: none; color: var(--text);
+  font-family: var(--font-num); font-size: 40px; font-weight: 700; letter-spacing: -.03em; text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.amount-field span { flex: 1; font-size: 22px; font-weight: 600; color: var(--muted); }
+
+/* Ein-Tipp-Leiste */
+.quick-row { margin: 4px 0 14px; }
+.quick-title { font-size: 13px; color: var(--muted); margin: 0 4px 8px; }
+.quick-row .chips { gap: 8px; padding: 2px 2px 4px; }
+.quick-chip {
+  flex-shrink: 0; display: inline-flex; align-items: center; gap: 6px;
+  min-height: 40px; padding: 0 14px 0 8px; border-radius: 999px;
+  background: var(--glass-ctrl); border: .5px solid rgba(255, 255, 255, .12);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .12);
+  -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur);
+  font-size: 15px; font-weight: 500; color: var(--text);
+  transition: transform .12s var(--ease);
+}
+.quick-chip:active { transform: scale(.95); }
+.qc-plus { width: 24px; height: 24px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); display: inline-flex; align-items: center; justify-content: center; }
+.qc-plus svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; }
+.qc-name { max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.qc-amt { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+
+/* „+“ in Lebensmittellisten */
+.add-pill {
+  flex-shrink: 0; display: inline-flex; align-items: center; gap: 4px;
+  min-height: 34px; padding: 0 12px 0 8px; border-radius: 999px;
+  background: var(--accent-soft); color: var(--accent);
+  font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums;
+  transition: transform .12s var(--ease), background .2s;
+}
+.add-pill svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; }
+.add-pill:active { transform: scale(.92); }
+.add-pill.done { background: var(--ok); color: #fff; }
+.list-item.tap { cursor: pointer; }
+
+/* Benachrichtigungen */
+.push-state { display: flex; align-items: center; gap: 10px; }
+.push-state .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--dim); }
+.push-state.on .dot { background: var(--ok); box-shadow: 0 0 10px var(--ok); }
+.code-box {
+  font-family: ui-monospace, Menlo, monospace; font-size: 11px; line-height: 1.4; color: var(--muted);
+  background: rgba(255, 255, 255, .06); border-radius: 14px; padding: 10px 12px; margin: 10px 0;
+  max-height: 96px; overflow: auto; word-break: break-all; user-select: all; -webkit-user-select: all;
+}
