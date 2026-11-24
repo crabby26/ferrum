@@ -43,6 +43,9 @@ const App = {
     const ref = S.meta.lastBackup || S.meta.installedAt || Date.now();
     return Date.now() - ref > 7 * 86400000;
   },
+  applyAccent() {
+    document.documentElement.dataset.accent = S.settings.accent || 'violet';
+  },
   updateBackupDot() { $('#settings-dot').hidden = !App.needsBackup(); },
 
   isIOS() { return /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); },
@@ -111,7 +114,7 @@ const App = {
         <div><h1 class="page-title">Heute</h1><div class="page-sub">${U.WD[now.getDay()].replace('.', '')}, ${now.getDate()}. ${U.MON[now.getMonth()]}</div></div>
         <div class="streak ${streak.n ? '' : 'cold'}" title="Tage in Folge getrackt">${U.icon.flame}${streak.n} ${streak.n === 1 ? 'Tag' : 'Tage'}</div>
       </div>
-      ${showInstall ? `<div class="inline-banner" style="background:rgba(255,198,43,.1)"><div class="txt"><b>Als App installieren</b>Tippe unten in Safari auf „Teilen“ und dann auf „Zum Home-Bildschirm“.</div><button class="icon-btn plain" data-act="hide-install" aria-label="Ausblenden">${U.icon.close}</button></div>` : ''}
+      ${showInstall ? `<div class="inline-banner"><div class="txt"><b>Als App installieren</b>Tippe unten in Safari auf „Teilen“ und dann auf „Zum Home-Bildschirm“.</div><button class="icon-btn plain" data-act="hide-install" aria-label="Ausblenden">${U.icon.close}</button></div>` : ''}
       ${App.needsBackup() ? `<div class="inline-banner"><div class="txt"><b>Backup fällig</b>${S.meta.lastBackup ? 'Dein letztes Backup ist älter als 7 Tage.' : 'Sichere deine Daten einmal pro Woche.'}</div><button class="btn small primary" data-act="backup">Sichern</button></div>` : ''}
       <div class="hero-rings">
         ${big}
@@ -230,6 +233,7 @@ const App = {
         <p style="color:#8E95A3">Schließe die App komplett und öffne sie erneut.</p></div>`;
       return;
     }
+    App.applyAccent();
     App.bind();
     App.go('today');
     Train.resume();

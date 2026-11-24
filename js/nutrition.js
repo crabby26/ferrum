@@ -137,7 +137,7 @@ const Nutri = {
           <div class="sum-kcal">${U.n(tot.kcal)} <small>/ ${U.n(st.kcal)} kcal</small></div>
           <div class="sum-rest">${rest >= 0 ? 'übrig' : 'über Ziel'}<b style="color:${rest >= 0 ? 'var(--text)' : 'var(--over)'}">${U.n(Math.abs(rest))}</b></div>
         </div>
-        ${bar(tot.kcal, st.kcal, tot.kcal > st.kcal * 1.05 ? 'var(--over)' : 'var(--gold)')}
+        ${bar(tot.kcal, st.kcal, tot.kcal > st.kcal * 1.05 ? 'var(--over)' : 'var(--accent)')}
         <div class="macro-bars">
           <div><div class="mb-label">Protein <b>${U.n(tot.p)}/${st.protein}</b></div>${bar(tot.p, st.protein, 'var(--prot)')}</div>
           <div><div class="mb-label">Kohlenh. <b>${U.n(tot.c)}/${st.carbs}</b></div>${bar(tot.c, st.carbs, 'var(--carb)')}</div>

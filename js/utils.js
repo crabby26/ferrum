@@ -326,7 +326,8 @@ const U = {
   confetti() {
     const box = document.createElement('div');
     box.className = 'confetti';
-    const colors = ['#F7DA8C', '#E7B64C', '#C9932E', '#F4F0E8', '#5B8CFF', '#3CC48B'];
+    const acc = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#9D8CFF';
+    const colors = [acc, acc, '#F5F5F7', '#4C9DFF', '#3CC48B', '#FF6B6B'];
     let html = '';
     for (let i = 0; i < 70; i++) {
       const left = Math.random() * 100;

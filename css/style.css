@@ -582,16 +582,34 @@ select.input {
   --text: #F5F5F7;
   --muted: #8D9099;
   --dim: #5A5D65;
-  --accent: #E8B65A;
-  --accent-2: #F0C878;
-  --ink: #17120A;
-  --gold: #E8B65A;
+  /* Akzentfarbe (Standard: Violett) – weitere Farben unten, wählbar in den Einstellungen */
+  --accent: #9D8CFF;
+  --accent-2: #B6A9FF;
+  --accent-soft: rgba(157, 140, 255, .16);
+  --ink: #120E2B;
+  --gold: var(--accent);
+  --over: #D5D7DD;      /* über dem Ziel: neutral statt Warnfarbe */
+  --prot: #4C9DFF;
   --r-lg: 20px;
   --r-md: 16px;
   --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Inter, Roboto, sans-serif;
   --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Inter, Roboto, sans-serif;
   --font-num: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Inter, Roboto, sans-serif;
 }
+/* Wählbare Akzentfarben */
+html[data-accent="mono"] { --accent: #F2F2F5; --accent-2: #FFFFFF; --accent-soft: rgba(255, 255, 255, .1); --ink: #0D0E10; }
+html[data-accent="lime"] { --accent: #C6F25C; --accent-2: #D7F88E; --accent-soft: rgba(198, 242, 92, .14); --ink: #142004; }
+html[data-accent="teal"] { --accent: #3FD8C4; --accent-2: #74E6D7; --accent-soft: rgba(63, 216, 196, .14); --ink: #03201C; }
+html[data-accent="gold"] { --accent: #E8B65A; --accent-2: #F0C878; --accent-soft: rgba(232, 182, 90, .14); --ink: #17120A; }
+.accent-dots { display: flex; gap: 12px; flex-wrap: wrap; }
+.accent-dot {
+  width: 44px; height: 44px; border-radius: 50%;
+  border: 2px solid transparent; outline: 2px solid transparent; outline-offset: 2px;
+  transition: transform .15s var(--ease), outline-color .2s;
+}
+.accent-dot.on { outline-color: var(--text); }
+.accent-dot:active { transform: scale(.9); }
+
 .num, .ring-center .v, .sum-kcal, .food-hero .kcal, .water-num, .kpi b, .stat b, .rest-time, .li-end .big { font-variant-numeric: tabular-nums; }
 
 /* Typografie */
@@ -676,7 +694,9 @@ select.input {
 .water { gap: 10px; }
 .water .water-num { font-size: 26px; margin-top: 2px; }
 .water-plus { background: rgba(94, 211, 234, .14); color: var(--water); }
-.meal-head .icon-btn.accent { background: rgba(232, 182, 90, .14); color: var(--accent); }
+.meal-head .icon-btn.accent { background: var(--accent-soft); color: var(--accent); }
+.streak { background: var(--accent-soft); }
+.streak.cold { background: var(--bg2); }
 .meal-head .icon-btn.plain { color: var(--muted); }
 .food-macros > div, .stat, .kpi { border-radius: 14px; }
 .food-macros b, .stat b { font-weight: 700; }

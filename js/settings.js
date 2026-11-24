@@ -11,6 +11,13 @@ const ACTIVITY = [
   [1.9, 'Extrem aktiv (körperliche Arbeit + Training)']
 ];
 const GOALS = [['bulk', 'Muskelaufbau'], ['keep', 'Halten'], ['cut', 'Diät']];
+const ACCENTS = [
+  ['violet', 'Violett', '#9D8CFF'],
+  ['mono', 'Weiß (schlicht)', '#F2F2F5'],
+  ['lime', 'Limette', '#C6F25C'],
+  ['teal', 'Türkis', '#3FD8C4'],
+  ['gold', 'Gold', '#E8B65A']
+];
 
 const Settings = {
   render() {
@@ -25,7 +32,15 @@ const Settings = {
       <div class="page-head"><h1 class="page-title">Einstellungen</h1></div>
       ${App.needsBackup() ? `<div class="inline-banner"><div class="txt"><b>Zeit für ein Backup</b>${lb ? 'Dein letztes Backup ist älter als 7 Tage.' : 'Du hast noch nie ein Backup gemacht.'}</div><button class="btn small primary" data-act="backup">Sichern</button></div>` : ''}
 
-      <div class="section-title" style="margin-top:0">Tagesziele</div>
+      <div class="section-title" style="margin-top:0">Akzentfarbe</div>
+      <div class="card">
+        <div class="accent-dots">
+          ${ACCENTS.map(a => `<button class="accent-dot ${(st.accent || 'violet') === a[0] ? 'on' : ''}" data-act="set-accent" data-v="${a[0]}" style="background:${a[2]}" aria-label="${a[1]}"></button>`).join('')}
+        </div>
+        <p class="hint" id="accent-name" style="margin-top:12px">${(ACCENTS.find(a => a[0] === (st.accent || 'violet')) || ACCENTS[0])[1]}</p>
+      </div>
+
+      <div class="section-title">Tagesziele</div>
       <div class="card">
         <div class="grid2">
           ${num('kcal', st.kcal, 'Kalorien', 'kcal')}
@@ -259,6 +274,15 @@ const Settings = {
       'backup': () => Settings.exportBackup(),
       'restore': () => $('#restore-file').click(),
       'csv': () => Settings.exportCSV(),
+      'set-accent': btn => {
+        S.settings.accent = btn.dataset.v;
+        Store.saveKV('settings');
+        App.applyAccent();
+        U.haptic();
+        $$('[data-act=set-accent]').forEach(b => b.classList.toggle('on', b === btn));
+        const a = ACCENTS.find(x => x[0] === btn.dataset.v);
+        const n = $('#accent-name'); if (n && a) n.textContent = a[1];
+      },
       'set-seg': btn => {
         S.settings[btn.dataset.k] = btn.dataset.v;
         Store.saveKV('settings');
