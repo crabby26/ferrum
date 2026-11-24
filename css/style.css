@@ -1,31 +1,37 @@
 /* =========================================================
-   GymFuel – Stylesheet
-   Farben angelehnt an Wettkampf-Hantelscheiben:
-   Gelb = Kalorien/Akzent, Blau = Protein, Grün = Kohlenhydrate, Rot = Fett
+   Ferrum – Stylesheet
+   Gold = Kalorien/Akzent. Makros angelehnt an Wettkampf-Hantelscheiben:
+   Blau = Protein, Grün = Kohlenhydrate, Rot = Fett
    ========================================================= */
 
 :root {
-  --bg: #14161B;
-  --bg2: #1C1F26;
-  --bg3: #262A33;
-  --bg4: #30353F;
-  --line: #2F3440;
-  --text: #F1EFEA;
-  --muted: #8E95A3;
-  --dim: #5E6573;
+  --bg: #0F1115;
+  --bg2: #171A20;
+  --bg3: #20242C;
+  --bg4: #2B303A;
+  --line: #242932;
+  --text: #F4F0E8;
+  --muted: #9097A4;
+  --dim: #5D6370;
 
-  --accent: #FFC62B;
-  --accent-2: #FFD866;
-  --ink: #17130A;
+  --accent: #E7B64C;
+  --accent-2: #F6D88A;
+  --ink: #1A1306;
+  --gold: linear-gradient(180deg, #F7DA8C 0%, #E7B64C 48%, #C9932E 100%);
+  --over: #E89A4C;
 
-  --prot: #3D86FF;
-  --carb: #2FBF71;
-  --fat: #FF5050;
-  --water: #5BD1E8;
-  --danger: #FF5050;
-  --ok: #2FBF71;
+  --prot: #5B8CFF;
+  --carb: #3CC48B;
+  --fat: #FF6B6B;
+  --water: #5ED3EA;
+  --danger: #FF5A5F;
+  --ok: #3CC48B;
 
-  --r-lg: 22px;
+  --hair: inset 0 1px 0 rgba(255, 255, 255, .05);
+  --lift: 0 14px 34px -22px rgba(0, 0, 0, .9);
+  --serif: ui-serif, "New York", "Iowan Old Style", "Palatino", Georgia, serif;
+
+  --r-lg: 24px;
   --r-md: 14px;
   --r-sm: 10px;
 
@@ -561,3 +567,81 @@ select.input {
 @media (min-width: 420px) {
   .ring-center .v { font-size: 50px; }
 }
+
+/* =========================================================
+   Premium-Ebene (Ferrum)
+   ========================================================= */
+body::before {
+  content: ""; position: fixed; left: -20%; right: -20%; top: -30%; height: 70%;
+  background: radial-gradient(55% 55% at 50% 0%, rgba(231, 182, 76, .09), transparent 72%);
+  pointer-events: none;
+}
+
+.page-title { font-family: var(--serif); font-weight: 600; font-size: 36px; letter-spacing: -.012em; }
+.section-title { font-weight: 650; letter-spacing: -.005em; }
+.next-card h2, .ws-head .t b, .sheet-title { letter-spacing: -.01em; }
+.next-card h2 { font-family: var(--serif); font-weight: 600; font-size: 34px; }
+
+.card, .list, .meal, .sum-card, .next-card, .tile, .ex-card {
+  border: 1px solid rgba(255, 255, 255, .035);
+  box-shadow: var(--hair), var(--lift);
+}
+.sheet-body .card, .sheet-body .list { border-color: rgba(255, 255, 255, .03); box-shadow: var(--hair); }
+
+.btn.primary, .chip.on, .icon-btn.accent, .workout-pill, .pr-pop, .toast.ok {
+  background: var(--gold);
+  color: var(--ink);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .45), 0 10px 26px -14px rgba(231, 182, 76, .75);
+}
+.btn.primary:active { filter: brightness(1.06); background: var(--gold); }
+.sheet-body .chip.on { background: var(--gold); }
+.btn { letter-spacing: -.005em; }
+
+.tab.active::after {
+  content: ""; position: absolute; top: 0; width: 22px; height: 3px; border-radius: 0 0 3px 3px;
+  background: var(--gold);
+}
+.tabbar { background: rgba(15, 17, 21, .78); border-top-color: rgba(255, 255, 255, .05); }
+
+.streak { background: rgba(231, 182, 76, .12); }
+.next-card::before { border-color: var(--accent); opacity: .1; border-width: 18px; }
+.sheet { border-radius: 28px 28px 0 0; box-shadow: var(--hair), 0 -20px 50px rgba(0, 0, 0, .55); }
+.sheet-grip { background: rgba(255, 255, 255, .16); }
+.ring-track { stroke: rgba(255, 255, 255, .055); }
+.hero-rings .ring-center .v { letter-spacing: -.03em; }
+.input:focus, .set-in:focus { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(231, 182, 76, .12); }
+.set-row.done .set-check { background: var(--ok); box-shadow: 0 6px 16px -8px rgba(60, 196, 139, .8); }
+.rest-progress i { background: var(--gold); }
+.pr-badge { background: var(--gold); }
+
+.inline-banner { background: rgba(231, 182, 76, .07) !important; border: 1px solid rgba(231, 182, 76, .16); }
+.inline-banner .txt { color: var(--muted); }
+.inline-banner .txt b { color: var(--text); font-weight: 650; }
+
+/* Startbildschirm */
+#splash {
+  position: fixed; inset: 0; z-index: 200; background: var(--bg);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+  transition: opacity .5s var(--ease), visibility 0s linear .5s;
+}
+#splash.out { opacity: 0; visibility: hidden; }
+#splash img { width: 84px; height: 84px; border-radius: 20px; box-shadow: 0 18px 40px -16px rgba(231, 182, 76, .5); animation: splashIn .7s var(--ease) both; }
+#splash span { font-family: var(--serif); font-size: 26px; font-weight: 600; letter-spacing: .02em; color: var(--text); animation: splashIn .7s .08s var(--ease) both; }
+@keyframes splashIn { from { opacity: 0; transform: translateY(8px) scale(.96); } }
+
+/* Schnell-Eintrag & Trend */
+.trend-card .big-num { font-family: var(--font-num); font-size: 30px; font-weight: 800; line-height: 1; }
+.trend-card .big-num small { font-size: 15px; color: var(--muted); font-weight: 700; }
+.kpi-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 12px 0; }
+.kpi { background: var(--bg3); border-radius: 16px; padding: 12px; }
+.kpi b { display: block; font-family: var(--font-num); font-size: 22px; font-weight: 800; }
+.kpi span { font-size: 12.5px; color: var(--muted); }
+
+/* Scheibenrechner */
+.plate-viz { display: flex; align-items: center; justify-content: center; height: 170px; margin: 6px 0 10px; }
+.plate-viz .sleeve { height: 16px; width: 54px; border-radius: 3px; background: linear-gradient(#E4E4E4, #8C8F96); }
+.plate-viz .collar { height: 34px; width: 10px; border-radius: 3px; background: linear-gradient(90deg, #9AA0A8, #E9EBEE, #9AA0A8); margin-right: 2px; }
+.plate-viz .plate { border-radius: 6px; margin-right: 2px; box-shadow: inset 0 1px 0 rgba(255,255,255,.35), inset 0 -2px 0 rgba(0,0,0,.25); }
+.plate-viz .tip { height: 16px; width: 40px; border-radius: 0 3px 3px 0; background: linear-gradient(#E4E4E4, #8C8F96); }
+.plate-list { text-align: center; font-family: var(--font-num); font-weight: 700; font-size: 17px; }
+.plate-list small { display: block; color: var(--muted); font-weight: 600; font-size: 13px; font-family: var(--font); margin-top: 2px; }

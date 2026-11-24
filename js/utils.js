@@ -142,7 +142,7 @@ const U = {
       <svg class="ring-svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" style="transform:rotate(-90deg)">
         <circle class="ring-track" cx="${size / 2}" cy="${size / 2}" r="${r}" stroke-width="${stroke}"/>
         <circle class="ring-bar" cx="${size / 2}" cy="${size / 2}" r="${r}" stroke-width="${stroke}"
-          stroke="${color}" stroke-dasharray="${c}" stroke-dashoffset="${c}" data-target="${c * (1 - p)}"/>
+          style="stroke:${color}" stroke-dasharray="${c}" stroke-dashoffset="${c}" data-target="${c * (1 - p)}"/>
       </svg>
       <div class="ring-center">${inner || ''}</div>
     </div>`;
@@ -283,11 +283,50 @@ const U = {
     } catch (e) { /* ignorieren */ }
   },
 
+  /* ---------- Haptisches Feedback ----------
+     Safari hat keine Vibrations-Schnittstelle. Ab iOS 18 löst aber das Umschalten
+     eines Schalters (<input switch>) ein kurzes Klopfen aus – das nutzen wir. */
+  haptic() {
+    if (typeof S !== 'undefined' && S.settings && S.settings.haptics === false) return;
+    try {
+      if (navigator.vibrate && !/iPhone|iPad/.test(navigator.userAgent)) { navigator.vibrate(10); return; }
+      if (!U._hx) {
+        const l = document.createElement('label');
+        l.setAttribute('aria-hidden', 'true');
+        l.style.cssText = 'position:fixed;left:-200px;top:0;width:1px;height:1px;opacity:0;pointer-events:none';
+        l.innerHTML = '<input type="checkbox" switch tabindex="-1">';
+        document.body.appendChild(l);
+        U._hx = l;
+      }
+      U._hx.click();
+    } catch (e) { /* egal */ }
+  },
+
+  /* ---------- Zahlen hochzählen ---------- */
+  countUp(root) {
+    $$('[data-count]', root).forEach(el => {
+      const to = +el.dataset.count || 0;
+      const dec = +(el.dataset.dec || 0);
+      el.removeAttribute('data-count');
+      if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) { el.textContent = U.n(to, dec); return; }
+      const t0 = performance.now(), dur = 750;
+      const step = t => {
+        const p = Math.min(1, (t - t0) / dur);
+        const e = 1 - Math.pow(1 - p, 3);
+        el.textContent = U.n(to * e, dec);
+        if (p < 1) requestAnimationFrame(step);
+      };
+      el.textContent = U.n(0, dec);
+      requestAnimationFrame(step);
+      setTimeout(() => { el.textContent = U.n(to, dec); }, dur + 200); // falls rAF pausiert
+    });
+  },
+
   /* ---------- Konfetti ---------- */
   confetti() {
     const box = document.createElement('div');
     box.className = 'confetti';
-    const colors = ['#FFC62B', '#3D86FF', '#2FBF71', '#FF5050', '#F1EFEA'];
+    const colors = ['#F7DA8C', '#E7B64C', '#C9932E', '#F4F0E8', '#5B8CFF', '#3CC48B'];
     let html = '';
     for (let i = 0; i < 70; i++) {
       const left = Math.random() * 100;

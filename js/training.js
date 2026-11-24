@@ -118,6 +118,9 @@ const Train = {
       <button class="list-item list" data-act="ex-browse" style="border-radius:var(--r-md)">
         <div class="li-main"><div class="li-title">Alle Übungen</div><div class="li-sub">${S.exercises.length} Übungen, Bestleistungen und Verlauf</div></div>${U.icon.chevron}
       </button>
+      <button class="list-item list" data-act="plates" style="border-radius:var(--r-md)">
+        <div class="li-main"><div class="li-title">Scheibenrechner</div><div class="li-sub">Welche Scheiben kommen auf die Stange?</div></div>${U.icon.chevron}
+      </button>
       <div class="section-title">Verlauf</div>
       <div class="list" id="hist-list">
         ${ws.slice(0, Train.histLimit || 15).map(w => Train.histItem(w)).join('') || '<div class="empty">Noch keine Workouts. Dein erstes erscheint hier.</div>'}
@@ -225,6 +228,7 @@ const Train = {
       <div class="ex-actions">
         <button class="btn" data-act="set-add" data-ei="${ei}">${U.icon.plus} Satz</button>
         <button class="btn" data-act="set-rm" data-ei="${ei}" ${ex.sets.length <= 1 ? 'disabled' : ''}>${U.icon.minus} Satz</button>
+        <button class="btn" data-act="plates" data-ei="${ei}">Scheiben</button>
       </div>
     </div>`;
   },
@@ -304,7 +308,8 @@ const Train = {
     s.pr = !!pr;
     Store.saveKV('active');
     Train.rerenderCard(ei);
-    if (pr) Train.celebrate(ex, s, pr);
+    U.haptic();
+    if (pr) { Train.celebrate(ex, s, pr); setTimeout(U.haptic, 160); setTimeout(U.haptic, 320); }
     Train.startRest(S.settings.rest || 120);
   },
 
@@ -318,6 +323,63 @@ const Train = {
       <small>${Train.setStr(s)}${e ? ', 1RM ≈ ' + U.n(e, 1) + ' kg' : ''}</small><small>${sub}</small>`;
     document.body.appendChild(pop);
     setTimeout(() => pop.remove(), 2700);
+  },
+
+  /* ---------- Scheibenrechner ---------- */
+  PLATES: [
+    { kg: 25, color: '#E5484D', h: 150, w: 24 },
+    { kg: 20, color: '#3E7BFA', h: 150, w: 21 },
+    { kg: 15, color: '#F2C230', h: 150, w: 17 },
+    { kg: 10, color: '#2DB37A', h: 150, w: 14 },
+    { kg: 5, color: '#ECEAE4', h: 96, w: 11 },
+    { kg: 2.5, color: '#E5484D', h: 76, w: 9 },
+    { kg: 1.25, color: '#B8BCC4', h: 60, w: 7 }
+  ],
+  plateSplit(total, bar) {
+    let side = (total - bar) / 2;
+    const out = [];
+    if (side <= 0) return { plates: out, rest: Math.max(0, total - bar) };
+    Train.PLATES.forEach(p => { while (side >= p.kg - 1e-9) { out.push(p); side -= p.kg; } });
+    return { plates: out, rest: Math.round(side * 2 * 100) / 100 };
+  },
+  plateCalc(ei) {
+    let w = 0;
+    if (S.active && ei != null) {
+      const ex = S.active.exercises[ei];
+      const next = ex.sets.find(s => !s.done);
+      const si = next ? ex.sets.indexOf(next) : ex.sets.length - 1;
+      const ph = Train.placeholder(ex, si) || {};
+      w = (next && next.w) || ph.w || (ex.sets[si] && ex.sets[si].w) || 0;
+    }
+    const bars = [20, 15, 10];
+    let bar = S.settings.bar || 20;
+    const sh = U.sheet({
+      title: 'Scheibenrechner',
+      body: `<div class="grid2" style="margin-bottom:6px">
+          <label class="field"><span>Gesamtgewicht (kg)</span><input class="input num" id="pc-w" inputmode="decimal" value="${w ? U.n(w, 2).replace(/\./g, '') : ''}" placeholder="z. B. 100"></label>
+          <div class="field"><span>Stange</span><div class="seg" id="pc-bar" style="margin:0">${bars.map(b => `<button data-b="${b}" class="${b === bar ? 'on' : ''}">${b}</button>`).join('')}</div></div>
+        </div>
+        <div id="pc-out"></div>`
+    });
+    const draw = () => {
+      const total = U.parseNum(sh.$('#pc-w').value);
+      const out = sh.$('#pc-out');
+      if (!(total > 0)) { out.innerHTML = '<div class="empty">Gib das Gesamtgewicht ein.</div>'; return; }
+      if (total < bar) { out.innerHTML = `<div class="empty">Das ist leichter als die Stange (${bar} kg).</div>`; return; }
+      const r = Train.plateSplit(total, bar);
+      const viz = `<div class="plate-viz"><div class="sleeve"></div><div class="collar"></div>${r.plates.map(p => `<div class="plate" style="height:${p.h}px;width:${p.w}px;background:${p.color}"></div>`).join('')}<div class="tip"></div></div>`;
+      const list = r.plates.length ? r.plates.map(p => U.n(p.kg, 2)).join(' + ') + ' kg' : 'Nur die Stange';
+      out.innerHTML = viz + `<div class="plate-list">Pro Seite: ${list}<small>${r.rest > 0 ? `Mit Standard-Scheiben nicht exakt möglich, es fehlen ${U.n(r.rest, 2)} kg.` : `Stange ${bar} kg + 2 × ${U.n((total - bar) / 2, 2)} kg`}</small></div>`;
+    };
+    sh.$('#pc-w').addEventListener('input', draw);
+    sh.$('#pc-bar').addEventListener('click', e => {
+      const b = e.target.closest('[data-b]'); if (!b) return;
+      bar = +b.dataset.b;
+      S.settings.bar = bar; Store.saveKV('settings');
+      sh.$$('#pc-bar button').forEach(x => x.classList.toggle('on', x === b));
+      draw();
+    });
+    draw();
   },
 
   /* ---------- Pausen-Timer ---------- */
@@ -385,6 +447,7 @@ const Train = {
       if (!Train.restNotified) {
         Train.restNotified = true;
         if (S.settings.sound !== false) U.beep(3);
+        U.haptic();
         if (!document.hidden) U.toast('Pause vorbei – nächster Satz!', 'ok');
       }
       if (t) { t.textContent = '+' + U.fmtDur(-left); t.classList.add('over'); }
@@ -762,6 +825,7 @@ const Train = {
         Store.saveKV('active'); Train.rerenderCard(+el.dataset.ei);
       },
       'ex-menu': el => Train.exMenu(+el.dataset.ei),
+      'plates': el => Train.plateCalc(el.dataset.ei != null ? +el.dataset.ei : null),
       'rest-adj': el => Train.adjustRest(+el.dataset.d),
       'rest-skip': () => Train.skipRest(),
       'tpl-new': () => Train.templateEditor(null),

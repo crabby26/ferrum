@@ -1,13 +1,13 @@
 /* =========================================================
-   Service Worker – macht die App offline-fähig.
+   Ferrum – Service Worker, macht die App offline-fähig.
 
    WICHTIG BEI JEDEM UPDATE:
-   Erhöhe die Versionsnummer unten (z. B. 1.0.0 → 1.0.1).
+   Erhöhe die Versionsnummer unten (z. B. 2.0.0 → 2.0.1).
    Nur dann merkt das iPhone, dass es neue Dateien gibt.
    Deine Daten (IndexedDB) sind davon NICHT betroffen.
    ========================================================= */
-const VERSION = '1.0.0';
-const CACHE = 'gymfuel-' + VERSION;
+const VERSION = '2.0.0';
+const CACHE = 'ferrum-' + VERSION;
 
 const ASSETS = [
   './',
@@ -53,7 +53,7 @@ self.addEventListener('install', event => {
 self.addEventListener('activate', event => {
   event.waitUntil((async () => {
     const keys = await caches.keys();
-    await Promise.all(keys.filter(k => k.startsWith('gymfuel-') && k !== CACHE).map(k => caches.delete(k)));
+    await Promise.all(keys.filter(k => (k.startsWith('ferrum-') || k.startsWith('gymfuel-')) && k !== CACHE).map(k => caches.delete(k)));
     await self.clients.claim();
   })());
 });

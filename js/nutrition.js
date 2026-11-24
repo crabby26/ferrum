@@ -35,6 +35,7 @@ const Nutri = {
     return `<span class="macros-inline"><span><i class="dot p"></i>${Nutri.g(v.p)} g</span><span><i class="dot c"></i>${Nutri.g(v.c)} g</span><span><i class="dot f"></i>${Nutri.g(v.f)} g</span></span>`;
   },
   amountLabel(e) {
+    if (e.food && e.food.src === 'quick') return 'Schnell-Eintrag';
     if (e.unit) return `${U.n(e.qty, 2)} × ${U.esc(e.unit.n)} (${U.n(e.grams)} g)`;
     return `${U.n(e.grams)} g`;
   },
@@ -137,9 +138,9 @@ const Nutri = {
       <div class="sum-card">
         <div class="sum-top">
           <div class="sum-kcal">${U.n(tot.kcal)} <small>/ ${U.n(st.kcal)} kcal</small></div>
-          <div class="sum-rest">${rest >= 0 ? 'übrig' : 'zu viel'}<b style="color:${rest >= 0 ? 'var(--text)' : 'var(--danger)'}">${U.n(Math.abs(rest))}</b></div>
+          <div class="sum-rest">${rest >= 0 ? 'übrig' : 'über Ziel'}<b style="color:${rest >= 0 ? 'var(--text)' : 'var(--over)'}">${U.n(Math.abs(rest))}</b></div>
         </div>
-        ${bar(tot.kcal, st.kcal, tot.kcal > st.kcal * 1.05 ? 'var(--danger)' : 'var(--accent)')}
+        ${bar(tot.kcal, st.kcal, tot.kcal > st.kcal * 1.05 ? 'var(--over)' : 'var(--gold)')}
         <div class="macro-bars">
           <div><div class="mb-label">Protein <b>${U.n(tot.p)}/${st.protein}</b></div>${bar(tot.p, st.protein, 'var(--prot)')}</div>
           <div><div class="mb-label">Kohlenh. <b>${U.n(tot.c)}/${st.carbs}</b></div>${bar(tot.c, st.carbs, 'var(--carb)')}</div>
@@ -204,7 +205,8 @@ const Nutri = {
       sh.$('#pk-top').innerHTML = `
         <div class="seg">${tabs.map(t => `<button data-tab="${t[0]}" class="${st.tab === t[0] ? 'on' : ''}">${t[1]}</button>`).join('')}</div>
         <div class="chips" style="margin-bottom:12px">
-          <button class="chip" data-a="manual">${'Barcode eintippen'}</button>
+          ${ctx.mode === 'pick' ? '' : '<button class="chip" data-a="quick">Schnell eintragen</button>'}
+          <button class="chip" data-a="manual">Barcode eintippen</button>
           <button class="chip" data-a="new-food">+ Eigenes Lebensmittel</button>
           ${ctx.mode === 'pick' ? '' : '<button class="chip" data-a="new-recipe">+ Rezept</button>'}
         </div>`;
@@ -281,6 +283,7 @@ const Nutri = {
       if (t.dataset.i != null) { pickFood(st.shown[+t.dataset.i]); return; }
       const a = t.dataset.a;
       if (a === 'retry') runOnline();
+      if (a === 'quick') Nutri.quickAdd(ctx);
       if (a === 'manual') Scanner.manual(code => Nutri.lookupBarcode(code, { ...ctx, picker: sh, after: () => { if (!sh.closed) drawList(); } }));
       if (a === 'new-food') Nutri.customFoodForm(null, { onSaved: f => { drawList(); pickFood(f); } });
       if (a === 'new-recipe') { Nutri.recipeEditor(null, { onSaved: () => { st.tab = 'mine'; drawTop(); drawList(); } }); }
@@ -524,6 +527,7 @@ const Nutri = {
         e2.meal = meal; e2.grams = Math.round(g * 10) / 10; e2.qty = unit ? q : e2.grams; e2.unit = unit ? { n: unit.n, g: unit.g } : null;
         Store.put('entries', e2);
         Nutri.pushRecent(food, unit ? q : e2.grams, unit ? unit.n : null);
+        U.haptic();
         sh.close();
         U.toast(entry ? 'Gespeichert' : `${food.name} hinzugefügt`, 'ok');
         if (ctx.after) ctx.after();
@@ -536,7 +540,61 @@ const Nutri = {
   editEntry(id) {
     const e = S.entries.find(x => x.id === id);
     if (!e) return;
+    if (e.food.src === 'quick') { Nutri.quickAdd({ day: e.date, meal: e.meal }, e); return; }
     Nutri.openFood(e.food, { entry: e, day: e.date });
+  },
+
+  /* ---------- Schnell-Eintrag: nur Kalorien & Makros ---------- */
+  quickAdd(ctx, entry) {
+    const f = entry ? entry.food : {};
+    let meal = entry ? entry.meal : (ctx.meal || 'snacks');
+    const v = x => (x ? U.n(x, 1).replace(/\./g, '') : '');
+    const sh = U.sheet({
+      title: entry ? 'Schnell-Eintrag' : 'Schnell eintragen',
+      body: `<p class="hint" style="margin:-4px 2px 14px">Für Restaurant, Mensa oder wenn es schnell gehen muss. Trag ein, was du ungefähr gegessen hast.</p>
+        <label class="field"><span>Bezeichnung (optional)</span><input class="input" id="qa-name" value="${U.esc(entry ? f.name : '')}" placeholder="z. B. Döner" autocomplete="off"></label>
+        <div class="grid2">
+          <label class="field"><span>Kalorien (kcal)</span><input class="input num" id="qa-kcal" inputmode="decimal" value="${v(f.kcal)}"></label>
+          <label class="field"><span>Protein (g)</span><input class="input num" id="qa-p" inputmode="decimal" value="${v(f.p)}"></label>
+          <label class="field"><span>Kohlenhydrate (g)</span><input class="input num" id="qa-c" inputmode="decimal" value="${v(f.c)}"></label>
+          <label class="field"><span>Fett (g)</span><input class="input num" id="qa-f" inputmode="decimal" value="${v(f.f)}"></label>
+        </div>
+        <p class="hint" id="qa-hint"></p>
+        <div class="chips wrap" id="qa-meal" style="margin-top:12px">${MEALS.map(m => `<button class="chip ${m.id === meal ? 'on' : ''}" data-meal="${m.id}">${m.name}</button>`).join('')}</div>`,
+      foot: entry
+        ? '<div class="btn-row"><button class="btn danger" data-a="del">Löschen</button><button class="btn primary" data-a="save" style="flex:2">Speichern</button></div>'
+        : '<button class="btn primary block" data-a="save">Eintragen</button>'
+    });
+    const num = id => { const x = U.parseNum(sh.$(id).value); return isNaN(x) ? 0 : x; };
+    const hint = () => {
+      const k = num('#qa-p') * 4 + num('#qa-c') * 4 + num('#qa-f') * 9;
+      sh.$('#qa-hint').textContent = k ? `Aus den Makros berechnet: ${U.n(k)} kcal${num('#qa-kcal') ? '' : ' – wird übernommen, wenn du keine Kalorien einträgst'}` : '';
+    };
+    sh.body.addEventListener('input', hint);
+    hint();
+    if (!entry) setTimeout(() => sh.$('#qa-kcal').focus(), 380);
+    sh.el.addEventListener('click', e => {
+      const m = e.target.closest('[data-meal]');
+      if (m) { meal = m.dataset.meal; sh.$$('#qa-meal .chip').forEach(c => c.classList.toggle('on', c === m)); return; }
+      const b = e.target.closest('[data-a]');
+      if (!b) return;
+      if (b.dataset.a === 'del') {
+        Store.del('entries', entry.id); sh.close(); U.toast('Eintrag gelöscht'); App.refresh(); return;
+      }
+      const p = num('#qa-p'), c = num('#qa-c'), fat = num('#qa-f');
+      let kcal = num('#qa-kcal');
+      if (!kcal) kcal = p * 4 + c * 4 + fat * 9;
+      if (!kcal) { U.toast('Bitte Kalorien oder Makros eintragen', 'err'); return; }
+      const food = { id: entry ? f.id : 'q:' + U.uid(), name: sh.$('#qa-name').value.trim() || 'Schnell-Eintrag', brand: '', kcal, p, c, f: fat, units: [], src: 'quick' };
+      const e2 = entry ? Object.assign({}, entry) : { id: U.uid(), date: ctx.day || Nutri.day, t: Date.now() };
+      Object.assign(e2, { meal, food, grams: 100, qty: 100, unit: null });
+      Store.put('entries', e2);
+      U.haptic();
+      sh.close();
+      U.toast(entry ? 'Gespeichert' : `${U.n(kcal)} kcal eingetragen`, 'ok');
+      if (ctx.after) ctx.after();
+      App.refresh();
+    });
   },
 
   /* ---------- Eigenes Lebensmittel ---------- */

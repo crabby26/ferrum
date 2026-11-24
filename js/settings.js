@@ -68,6 +68,10 @@ const Settings = {
           <div style="flex:1"><b>Ton am Ende der Pause</b><div class="hint" style="margin:2px 0 0">Bei eingeschaltetem Stummschalter ist der Ton nicht zu hören.</div></div>
           <label class="switch"><input type="checkbox" data-set="sound" ${st.sound !== false ? 'checked' : ''}><i></i></label>
         </div>
+        <div style="display:flex;align-items:center;gap:12px;margin-top:14px">
+          <div style="flex:1"><b>Haptisches Feedback</b><div class="hint" style="margin:2px 0 0">Kurzes Klopfen beim Abhaken und Eintragen (ab iOS 18).</div></div>
+          <label class="switch"><input type="checkbox" data-set="haptics" ${st.haptics !== false ? 'checked' : ''}><i></i></label>
+        </div>
         <button class="btn block" data-act="test-sound" style="margin-top:12px">Ton testen</button>
       </div>
 
@@ -76,7 +80,9 @@ const Settings = {
         <div class="card-sub" style="margin-bottom:12px">${lb ? 'Letztes Backup: ' + U.fmtDate(U.key(new Date(lb)), true) : 'Noch kein Backup erstellt.'}
           Alle Daten liegen nur auf diesem iPhone. Sichere sie regelmäßig in der Dateien-App oder iCloud Drive.</div>
         <button class="btn primary block" data-act="backup" style="margin-bottom:10px">${U.icon.share} Backup exportieren</button>
-        <button class="btn block" data-act="restore">${U.icon.import} Backup importieren</button>
+        <button class="btn block" data-act="restore" style="margin-bottom:10px">${U.icon.import} Backup importieren</button>
+        <button class="btn block" data-act="csv">Als Tabelle exportieren (CSV)</button>
+        <p class="hint">Die Tabellen öffnest du mit Numbers oder Excel. Zum Wiederherstellen brauchst du das Backup.</p>
         <input type="file" id="restore-file" hidden>
       </div>
       <div class="card">
@@ -90,7 +96,7 @@ const Settings = {
         <div class="list-item"><div class="li-main"><div class="li-title">Speicher geschützt</div><div class="li-sub">iOS löscht die Daten nicht automatisch</div></div><div class="li-end" id="app-persist" style="color:var(--muted)">…</div></div>
         <button class="list-item" data-act="check-update"><div class="li-main"><div class="li-title" style="color:var(--accent)">Nach Updates suchen</div></div></button>
       </div>
-      <p class="hint" style="text-align:center;margin:18px 0 0">Lebensmitteldaten online: Open Food Facts (ODbL)</p>
+      <p class="hint" style="text-align:center;margin:22px 0 0"><span style="font-family:var(--serif);font-size:17px;color:var(--text)">Ferrum</span><br>Ohne Konto, ohne Werbung, ohne Tracking.<br>Lebensmitteldaten online: Open Food Facts (ODbL)</p>
     `;
     Settings.drawCalc();
     Settings.appInfo();
@@ -115,8 +121,8 @@ const Settings = {
     const v = $('#app-version'), p = $('#app-persist');
     try {
       const keys = window.caches ? await caches.keys() : [];
-      const k = keys.find(x => x.startsWith('gymfuel-'));
-      if (v) v.textContent = k ? k.replace('gymfuel-', '') : 'ohne Offline-Cache';
+      const k = keys.find(x => x.startsWith('ferrum-'));
+      if (v) v.textContent = k ? k.replace('ferrum-', '') : 'ohne Offline-Cache';
     } catch (e) { if (v) v.textContent = '–'; }
     try {
       const ok = navigator.storage && navigator.storage.persisted ? await navigator.storage.persisted() : false;
@@ -127,7 +133,7 @@ const Settings = {
   saveField(el) {
     const k = el.dataset.set;
     const st = S.settings;
-    if (k === 'sound') st.sound = el.checked;
+    if (k === 'sound' || k === 'haptics') { st[k] = el.checked; if (k === 'haptics' && el.checked) U.haptic(); }
     else if (k === 'activity' || k === 'rest') st[k] = +el.value;
     else {
       const x = U.parseNum(el.value);
@@ -147,7 +153,7 @@ const Settings = {
   /* ---------- Backup ---------- */
   async exportBackup() {
     const json = JSON.stringify(Store.exportData());
-    const name = `gymfuel-backup-${U.today()}.json`;
+    const name = `ferrum-backup-${U.today()}.json`;
     const done = () => {
       S.meta.lastBackup = Date.now();
       Store.saveKV('meta');
@@ -162,7 +168,7 @@ const Settings = {
     const shareable = files.find(f => navigator.canShare && navigator.canShare({ files: [f] }));
     if (shareable && navigator.share) {
       try {
-        await navigator.share({ files: [shareable], title: 'GymFuel Backup' });
+        await navigator.share({ files: [shareable], title: 'Ferrum Backup' });
         done();
         return;
       } catch (e) {
@@ -179,16 +185,55 @@ const Settings = {
     done();
   },
 
+  /* ---------- CSV-Export (deutsches Excel: Semikolon, Dezimalkomma) ---------- */
+  csvFiles() {
+    const cell = v => {
+      if (typeof v === 'number') return String(Math.round(v * 10) / 10).replace('.', ',');
+      const s = String(v == null ? '' : v);
+      return /[";\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+    };
+    const csv = rows => '﻿' + rows.map(r => r.map(cell).join(';')).join('\r\n');
+    const food = [['Datum', 'Mahlzeit', 'Lebensmittel', 'Marke', 'Menge (g)', 'kcal', 'Protein (g)', 'Kohlenhydrate (g)', 'Fett (g)']];
+    S.entries.slice().sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : (a.t || 0) - (b.t || 0)).forEach(e => {
+      const v = Nutri.calc(e.food, e.grams);
+      food.push([e.date, mealName(e.meal), e.food.name, e.food.brand || '', e.food.src === 'quick' ? '' : e.grams, v.kcal, v.p, v.c, v.f]);
+    });
+    const train = [['Datum', 'Workout', 'Übung', 'Satz', 'Gewicht (kg)', 'Wiederholungen', 'Geschätztes 1RM (kg)', 'Rekord']];
+    S.workouts.slice().sort((a, b) => a.start - b.start).forEach(w => w.exercises.forEach(x => x.sets.forEach((s, i) => {
+      train.push([w.date, w.name, x.name, i + 1, +s.w || 0, +s.r || 0, Train.e1rm(s.w, s.r), s.pr ? 'ja' : '']);
+    })));
+    const weight = [['Datum', 'Gewicht (kg)']].concat(Progress.weightsSorted().map(w => [w.id, w.kg]));
+    const d = U.today();
+    const mk = (rows, name) => new File([csv(rows)], name, { type: 'text/csv' });
+    return [mk(food, `ferrum-ernaehrung-${d}.csv`), mk(train, `ferrum-training-${d}.csv`), mk(weight, `ferrum-gewicht-${d}.csv`)];
+  },
+  async exportCSV() {
+    let files;
+    try { files = Settings.csvFiles(); } catch (e) { U.toast('Export fehlgeschlagen: ' + e.message, 'err'); return; }
+    if (navigator.share && navigator.canShare && navigator.canShare({ files })) {
+      try { await navigator.share({ files, title: 'Ferrum Tabellen' }); U.toast('Tabellen exportiert', 'ok'); return; }
+      catch (e) { if (e && e.name === 'AbortError') return; }
+    }
+    files.forEach((f, i) => setTimeout(() => {
+      const url = URL.createObjectURL(f);
+      const a = document.createElement('a');
+      a.href = url; a.download = f.name;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+    }, i * 400));
+    U.toast('Tabellen exportiert', 'ok');
+  },
+
   async importFile(file) {
     let obj;
     try {
       const text = file.text ? await file.text() : await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsText(file); });
       obj = JSON.parse(text);
     } catch (e) {
-      U.toast('Die Datei konnte nicht gelesen werden. Wähle eine GymFuel-Backup-Datei (.json).', 'err');
+      U.toast('Die Datei konnte nicht gelesen werden. Wähle eine Ferrum-Backup-Datei (.json).', 'err');
       return;
     }
-    if (!obj || obj.app !== 'gymfuel') { U.toast('Das ist keine GymFuel-Sicherung.', 'err'); return; }
+    if (!Store.isBackup(obj)) { U.toast('Das ist keine Ferrum-Sicherung.', 'err'); return; }
     const d = obj.data || {};
     const info = `${(d.entries || []).length} Mahlzeiten-Einträge, ${(d.workouts || []).length} Workouts, ${(d.weights || []).length} Gewichtseinträge vom ${obj.exportedAt ? new Date(obj.exportedAt).toLocaleDateString('de-DE') : '?'}`;
     if (!(await U.confirm(`Die Sicherung enthält ${info}. Alle aktuellen Daten auf diesem iPhone werden dadurch ersetzt.`, { ok: 'Wiederherstellen', title: 'Backup wiederherstellen?' }))) return;
@@ -213,6 +258,7 @@ const Settings = {
     Object.assign(App.actions, {
       'backup': () => Settings.exportBackup(),
       'restore': () => $('#restore-file').click(),
+      'csv': () => Settings.exportCSV(),
       'set-seg': btn => {
         S.settings[btn.dataset.k] = btn.dataset.v;
         Store.saveKV('settings');

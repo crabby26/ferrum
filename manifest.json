@@ -1,14 +1,14 @@
 {
-  "name": "GymFuel – Training & Ernährung",
-  "short_name": "GymFuel",
+  "name": "Ferrum – Training & Ernährung",
+  "short_name": "Ferrum",
   "description": "Training und Ernährung tracken. Alle Daten bleiben auf deinem iPhone.",
   "lang": "de",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#14161B",
-  "theme_color": "#14161B",
+  "background_color": "#0F1115",
+  "theme_color": "#0F1115",
   "icons": [
     { "src": "icons/icon-180.png", "sizes": "180x180", "type": "image/png" },
     { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },

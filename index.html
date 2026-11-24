@@ -3,13 +3,13 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>GymFuel</title>
-  <meta name="description" content="Training und Ernährung tracken – alles bleibt auf deinem iPhone.">
-  <meta name="theme-color" content="#14161B">
+  <title>Ferrum</title>
+  <meta name="description" content="Ferrum – Training und Ernährung tracken. Alles bleibt auf deinem iPhone.">
+  <meta name="theme-color" content="#0F1115">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="GymFuel">
+  <meta name="apple-mobile-web-app-title" content="Ferrum">
   <meta name="format-detection" content="telephone=no">
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icons/icon-180.png">
@@ -17,6 +17,19 @@
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+  <div id="splash"><img src="icons/icon-180.png" alt=""><span>Ferrum</span></div>
+
+  <!-- Gold-Verlauf für Diagramme und Ringe -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <linearGradient id="g-gold" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#F7DA8C"/>
+        <stop offset=".5" stop-color="#E7B64C"/>
+        <stop offset="1" stop-color="#C9932E"/>
+      </linearGradient>
+    </defs>
+  </svg>
+
   <div id="app">
     <div id="banner-area"></div>
 

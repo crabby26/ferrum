@@ -6,17 +6,20 @@
 'use strict';
 
 const DB = {
-  NAME: 'gymfuel',
+  NAME: 'ferrum',
+  OLD_NAME: 'gymfuel', // Name vor der Umbenennung – Daten werden einmalig übernommen
   VERSION: 1,
   STORES: ['kv', 'foods', 'entries', 'water', 'workouts', 'exercises', 'templates', 'weights'],
   db: null,
+  fresh: false,
 
   open() {
     return new Promise((resolve, reject) => {
       if (!window.indexedDB) { reject(new Error('IndexedDB wird nicht unterstützt')); return; }
       const req = indexedDB.open(DB.NAME, DB.VERSION);
-      req.onupgradeneeded = () => {
+      req.onupgradeneeded = e => {
         const db = req.result;
+        if (e.oldVersion === 0) DB.fresh = true;
         DB.STORES.forEach(s => {
           if (!db.objectStoreNames.contains(s)) db.createObjectStore(s, { keyPath: 'id' });
         });
@@ -49,6 +52,34 @@ const DB = {
   clear(store) { return DB._tx(store, 'readwrite', os => os.clear()); },
   putMany(store, arr) {
     return DB._tx(store, 'readwrite', os => { arr.forEach(o => os.put(o)); return null; });
+  },
+
+  // Alte Datenbank (vor der Umbenennung) in die neue kopieren. Die alte bleibt als Sicherheit erhalten.
+  async migrateOld() {
+    const old = await new Promise(resolve => {
+      let created = false;
+      let req;
+      try { req = indexedDB.open(DB.OLD_NAME); } catch (e) { resolve(null); return; }
+      req.onupgradeneeded = () => { created = true; };
+      req.onsuccess = () => {
+        const db = req.result;
+        if (created) { db.close(); indexedDB.deleteDatabase(DB.OLD_NAME); resolve(null); } else resolve(db);
+      };
+      req.onerror = () => resolve(null);
+    });
+    if (!old) return 0;
+    let n = 0;
+    for (const s of DB.STORES) {
+      if (!old.objectStoreNames.contains(s)) continue;
+      const items = await new Promise(resolve => {
+        const r = old.transaction(s, 'readonly').objectStore(s).getAll();
+        r.onsuccess = () => resolve(r.result || []);
+        r.onerror = () => resolve([]);
+      });
+      if (items.length) { await DB.putMany(s, items); n += items.length; }
+    }
+    old.close();
+    return n;
   }
 };
 
@@ -56,7 +87,7 @@ const DB = {
 function calcGoals(p) {
   const weight = +p.weight || 70, height = +p.height || 175, age = +p.age || 25;
   const bmr = 10 * weight + 6.25 * height - 5 * age + (p.sex === 'f' ? -161 : 5);
-  const tdee = bmr * (+p.activity || 1.55);
+  const tdee = p.tdeeOverride > 0 ? p.tdeeOverride : bmr * (+p.activity || 1.55);
   const adj = p.goal === 'bulk' ? 300 : p.goal === 'cut' ? -500 : 0;
   const kcal = Math.round((tdee + adj) / 10) * 10;
   const pPerKg = p.goal === 'cut' ? 2.2 : p.goal === 'bulk' ? 2.0 : 1.8;
@@ -72,7 +103,7 @@ function defaultSettings() {
   return Object.assign(base, {
     kcal: g.kcal, protein: g.protein, carbs: g.carbs, fat: g.fat,
     waterGoal: 3000, glass: 250,
-    rest: 120, sound: true
+    rest: 120, sound: true, haptics: true, bar: 20
   });
 }
 
@@ -95,6 +126,9 @@ const LIST_STORES = ['foods', 'entries', 'water', 'workouts', 'exercises', 'temp
 const Store = {
   async load() {
     await DB.open();
+    if (DB.fresh) {
+      try { await DB.migrateOld(); } catch (e) { console.warn('Übernahme alter Daten fehlgeschlagen', e); }
+    }
     for (const s of LIST_STORES) S[s] = (await DB.all(s)) || [];
     const kv = (await DB.all('kv')) || [];
     const get = id => { const x = kv.find(k => k.id === id); return x ? x.value : null; };
@@ -147,10 +181,14 @@ const Store = {
       { id: 'meta', value: Object.assign({}, S.meta) },
       { id: 'active', value: S.active }
     ];
-    return { app: 'gymfuel', format: 1, exportedAt: new Date().toISOString(), data };
+    return { app: 'ferrum', format: 1, exportedAt: new Date().toISOString(), data };
+  },
+  isBackup(obj) {
+    // Sicherungen aus der Zeit vor der Umbenennung („gymfuel“) bleiben gültig
+    return !!(obj && (obj.app === 'ferrum' || obj.app === 'gymfuel') && obj.data);
   },
   async importData(obj) {
-    if (!obj || obj.app !== 'gymfuel' || !obj.data) throw new Error('Das ist keine GymFuel-Sicherung.');
+    if (!Store.isBackup(obj)) throw new Error('Das ist keine Ferrum-Sicherung.');
     const d = obj.data;
     for (const s of LIST_STORES) {
       if (d[s] && !Array.isArray(d[s])) throw new Error('Sicherung beschädigt (' + s + ').');
@@ -165,5 +203,6 @@ const Store = {
   },
   async wipe() {
     for (const s of DB.STORES) await DB.clear(s);
+    try { indexedDB.deleteDatabase(DB.OLD_NAME); } catch (e) { /* egal */ }
   }
 };

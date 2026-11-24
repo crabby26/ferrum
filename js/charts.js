@@ -45,11 +45,12 @@ const Charts = {
     const Y = y => pad.t + (1 - (y - t.lo) / (t.hi - t.lo)) * ph;
     const yFmt = opts.yFmt || (v => U.n(v, 1));
     const gid = 'g' + U.uid();
+    const areaC = series[0].area || (String(series[0].color).startsWith('url(') ? 'var(--accent)' : series[0].color);
 
     let svg = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
       <defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stop-color="${series[0].color}" stop-opacity=".28"/>
-        <stop offset="1" stop-color="${series[0].color}" stop-opacity="0"/>
+        <stop offset="0" style="stop-color:${areaC};stop-opacity:.28"/>
+        <stop offset="1" style="stop-color:${areaC};stop-opacity:0"/>
       </linearGradient></defs>`;
     t.ticks.forEach(v => {
       const y = Y(v);
@@ -73,17 +74,17 @@ const Charts = {
       if (si === 0 && pts.length > 1) {
         svg += `<path d="${d} L${X(pts[pts.length - 1].x).toFixed(1)} ${pad.t + ph} L${X(pts[0].x).toFixed(1)} ${pad.t + ph} Z" fill="url(#${gid})"/>`;
       }
-      svg += `<path d="${d}" fill="none" stroke="${s.color}" stroke-width="${s.width || 2.5}" stroke-linejoin="round" stroke-linecap="round" ${s.dash ? 'stroke-dasharray="5 4"' : ''}/>`;
+      svg += `<path d="${d}" style="fill:none;stroke:${s.color}" stroke-width="${s.width === 0 ? 0 : (s.width || 2.5)}" stroke-linejoin="round" stroke-linecap="round" ${s.dash ? 'stroke-dasharray="5 4"' : ''}/>`;
       if (s.dots !== false && pts.length <= 60) {
-        pts.forEach(p => { svg += `<circle cx="${X(p.x)}" cy="${Y(p.y)}" r="3" fill="${s.color}"/>`; });
+        pts.forEach(p => { svg += `<circle cx="${X(p.x)}" cy="${Y(p.y)}" r="3" style="fill:${s.color}"/>`; });
       }
       if (si === 0) {
         const lp = pts[pts.length - 1];
-        svg += `<circle cx="${X(lp.x)}" cy="${Y(lp.y)}" r="5.5" fill="var(--bg2)" stroke="${s.color}" stroke-width="2.5"/>`;
+        svg += `<circle cx="${X(lp.x)}" cy="${Y(lp.y)}" r="5.5" style="fill:var(--bg2);stroke:${s.color}" stroke-width="2.5"/>`;
       }
     });
-    svg += `<line class="hover-line" x1="0" x2="0" y1="${pad.t}" y2="${pad.t + ph}" stroke="var(--muted)" stroke-width="1" opacity="0"/>
-      <circle class="hover-dot" r="6" fill="${series[0].color}" stroke="var(--text)" stroke-width="2" opacity="0"/>
+    svg += `<line class="hover-line" x1="0" x2="0" y1="${pad.t}" y2="${pad.t + ph}" style="stroke:var(--muted)" stroke-width="1" opacity="0"/>
+      <circle class="hover-dot" r="6" style="fill:${areaC};stroke:var(--text)" stroke-width="2" opacity="0"/>
       <rect x="${pad.l}" y="0" width="${pw}" height="${H}" fill="transparent" class="hit"/></svg>`;
     el.innerHTML = `<div class="chart">${svg}<div class="chart-tip" hidden></div></div>`;
 
@@ -140,7 +141,7 @@ const Charts = {
       if (v > 0) {
         const r = Math.min(6, bw / 2, h);
         svg += `<path d="M${cx - bw / 2} ${pad.t + ph} V${y + r} Q${cx - bw / 2} ${y} ${cx - bw / 2 + r} ${y} H${cx + bw / 2 - r} Q${cx + bw / 2} ${y} ${cx + bw / 2} ${y + r} V${pad.t + ph} Z"
-          fill="${d.color || opts.color || 'var(--accent)'}" opacity="${d.dim ? .45 : 1}"/>`;
+          style="fill:${d.color || opts.color || 'var(--accent)'}" opacity="${d.dim ? .45 : 1}"/>`;
         if (data.length <= 10) svg += `<text x="${cx}" y="${y - 5}" text-anchor="middle" style="fill:var(--text);font-weight:700;font-size:10.5px">${yFmt(v)}</text>`;
       }
       svg += `<text x="${cx}" y="${H - 6}" text-anchor="middle">${U.esc(d.label)}</text>`;

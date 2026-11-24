@@ -66,12 +66,12 @@ const App = {
     const rest = st.kcal - t.kcal;
     const over = t.kcal > st.kcal * 1.05;
 
-    const big = U.ring(212, 18, t.kcal / st.kcal, over ? 'var(--danger)' : 'var(--accent)', `
-      <div class="v">${U.n(Math.abs(rest))}</div>
-      <div class="l">${rest >= 0 ? 'kcal übrig' : 'kcal zu viel'}</div>
+    const big = U.ring(212, 18, t.kcal / st.kcal, over ? 'var(--over)' : 'url(#g-gold)', `
+      <div class="v" data-count="${Math.round(Math.abs(rest))}">${U.n(Math.abs(rest))}</div>
+      <div class="l">${rest >= 0 ? 'kcal übrig' : 'kcal über Ziel'}</div>
       <div class="s">${U.n(t.kcal)} von ${U.n(st.kcal)}</div>`);
     const mr = (v, goal, color, name) => `<div class="macro-ring">
-      ${U.ring(92, 9, v / goal, color, `<div class="v">${U.n(v)}</div><div class="l">g</div>`)}
+      ${U.ring(92, 9, v / goal, color, `<div class="v" data-count="${Math.round(v)}">${U.n(v)}</div><div class="l">g</div>`)}
       <div class="name">${name}</div><div class="goal">Ziel ${goal} g</div></div>`;
 
     // Training heute
@@ -127,6 +127,9 @@ const App = {
       ${streak.n && !streak.today ? `<p class="hint" style="text-align:center">Trag heute etwas ein, damit deine Serie von ${streak.n} ${streak.n === 1 ? 'Tag' : 'Tagen'} weiterläuft.</p>` : ''}
     `;
     U.animateRings(el);
+    // Zahlen nur beim ersten Öffnen hochzählen lassen
+    if (!App._counted) { App._counted = true; U.countUp(el); }
+    else $$('[data-count]', el).forEach(x => x.removeAttribute('data-count'));
   },
 
   /* ---------- Service Worker & Updates ---------- */
@@ -233,6 +236,8 @@ const App = {
     App.updateBackupDot();
     if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
     App.registerSW();
+    const sp = $('#splash');
+    if (sp) setTimeout(() => { sp.classList.add('out'); setTimeout(() => { sp.hidden = true; }, 600); }, 450);
   }
 };
 
