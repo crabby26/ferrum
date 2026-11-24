@@ -107,6 +107,12 @@ const Settings = {
         <input type="file" id="restore-file" hidden>
       </div>
       <div class="card">
+        <div class="card-title">Aus Hevy übernehmen</div>
+        <p class="hint" style="margin:4px 0 12px">In Hevy: Profil → Einstellungen → Daten exportieren → Workouts exportieren. Die CSV-Datei hier auswählen. Deine Workouts werden hinzugefügt, nichts wird überschrieben.</p>
+        <button class="btn block" data-act="hevy">Hevy-Datei auswählen</button>
+        <input type="file" id="hevy-file" hidden>
+      </div>
+      <div class="card">
         <div class="card-sub" style="margin-bottom:10px">${S.entries.length} Mahlzeiten-Einträge, ${S.workouts.length} Workouts, ${S.weights.length} Gewichtseinträge, ${S.foods.length} eigene Lebensmittel und Rezepte</div>
         <button class="btn danger block" data-act="wipe">Alle Daten löschen</button>
       </div>
@@ -316,10 +322,15 @@ const Settings = {
         Settings.importFile(e.target.files[0]);
         e.target.value = '';
       }
+      if (e.target.id === 'hevy-file' && e.target.files[0]) {
+        HevyImport.run(e.target.files[0]);
+        e.target.value = '';
+      }
     });
     Object.assign(App.actions, {
       'backup': () => Settings.exportBackup(),
       'restore': () => $('#restore-file').click(),
+      'hevy': () => $('#hevy-file').click(),
       'csv': () => Settings.exportCSV(),
       'push-on': async () => {
         try {

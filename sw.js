@@ -6,7 +6,7 @@
    Nur dann merkt das iPhone, dass es neue Dateien gibt.
    Deine Daten (IndexedDB) sind davon NICHT betroffen.
    ========================================================= */
-const VERSION = '4.0.0';
+const VERSION = '4.1.0';
 const CACHE = 'ferrum-' + VERSION;
 
 const ASSETS = [
@@ -21,6 +21,7 @@ const ASSETS = [
   './js/scanner.js',
   './js/nutrition.js',
   './js/training.js',
+  './js/import.js',
   './js/progress.js',
   './js/settings.js',
   './js/app.js',
