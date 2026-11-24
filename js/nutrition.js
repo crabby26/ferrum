@@ -65,20 +65,17 @@ const Nutri = {
     const ml = Nutri.water(day);
     const goal = S.settings.waterGoal || 3000;
     const glass = S.settings.glass || 250;
-    const n = Math.max(1, Math.round(goal / glass));
-    const full = Math.floor(ml / glass);
-    let g = '';
-    for (let i = 0; i < Math.max(n, full); i++) g += `<i class="glass ${i < full ? 'full' : ''}"></i>`;
+    const pct = U.clamp(ml / goal * 100, 0, 100);
     return `<div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px">
-        <div class="card-title">Wasser</div>
-        <div class="water-num">${U.n(ml / 1000, 2)} <small>/ ${U.n(goal / 1000, 1)} l</small></div>
-      </div>
       <div class="water">
-        <button class="icon-btn" data-act="water" data-day="${day}" data-d="-1" aria-label="Glas entfernen">${U.icon.minus}</button>
-        <div class="water-glasses">${g}</div>
-        <button class="icon-btn" style="background:var(--water);color:#06202a" data-act="water" data-day="${day}" data-d="1" aria-label="Glas hinzufügen">${U.icon.plus}</button>
+        <div style="flex:1;min-width:0">
+          <div class="card-sub">Wasser</div>
+          <div class="water-num">${U.n(ml / 1000, 2)} <small>/ ${U.n(goal / 1000, 1)} l</small></div>
+        </div>
+        <button class="icon-btn" data-act="water" data-day="${day}" data-d="-1" aria-label="${glass} ml entfernen">${U.icon.minus}</button>
+        <button class="icon-btn water-plus" data-act="water" data-day="${day}" data-d="1" aria-label="${glass} ml hinzufügen">${U.icon.plus}</button>
       </div>
+      <div class="bar" style="margin-top:14px"><i style="width:${pct}%;background:var(--water)"></i></div>
     </div>`;
   },
 

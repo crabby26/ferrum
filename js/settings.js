@@ -96,7 +96,7 @@ const Settings = {
         <div class="list-item"><div class="li-main"><div class="li-title">Speicher geschützt</div><div class="li-sub">iOS löscht die Daten nicht automatisch</div></div><div class="li-end" id="app-persist" style="color:var(--muted)">…</div></div>
         <button class="list-item" data-act="check-update"><div class="li-main"><div class="li-title" style="color:var(--accent)">Nach Updates suchen</div></div></button>
       </div>
-      <p class="hint" style="text-align:center;margin:22px 0 0"><span style="font-family:var(--serif);font-size:17px;color:var(--text)">Ferrum</span><br>Ohne Konto, ohne Werbung, ohne Tracking.<br>Lebensmitteldaten online: Open Food Facts (ODbL)</p>
+      <p class="hint" style="text-align:center;margin:22px 0 0"><span style="font-family:var(--font-display);font-weight:700;font-size:17px;letter-spacing:-.02em;color:var(--text)">Ferrum</span><br>Ohne Konto, ohne Werbung, ohne Tracking.<br>Lebensmitteldaten online: Open Food Facts (ODbL)</p>
     `;
     Settings.drawCalc();
     Settings.appInfo();

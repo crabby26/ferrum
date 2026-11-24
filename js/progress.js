@@ -79,7 +79,7 @@ const Progress = {
           <div><div class="card-title">Körpergewicht</div>
             <div class="card-sub">${last ? 'Zuletzt ' + U.fmtDay(last.id) : 'Noch kein Eintrag'}</div></div>
           <div style="text-align:right">
-            <div class="num" style="font-size:30px;font-weight:800;line-height:1">${last ? U.n(last.kg, 1) : '–'}<small style="font-size:15px;color:var(--muted)"> kg</small></div>
+            <div class="num" style="font-size:30px;font-weight:700;letter-spacing:-.02em;line-height:1">${last ? U.n(last.kg, 1) : '–'}<small style="font-size:15px;color:var(--muted)"> kg</small></div>
             ${diff != null ? `<div class="num" style="font-size:13px;color:var(--muted)">${diff > 0 ? '+' : ''}${U.n(diff, 1)} kg seit ${U.fmtShort(ref.id)}</div>` : ''}
           </div>
         </div>

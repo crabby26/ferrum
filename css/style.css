@@ -436,7 +436,7 @@ select.input {
 .set-grid.head { font-size: 12px; color: var(--muted); font-weight: 700; padding: 0 0 4px; text-align: center; }
 .set-row { margin-bottom: 6px; border-radius: 12px; transition: background .25s; padding: 3px 0; }
 .set-row.done { background: rgba(47, 191, 113, .12); }
-.set-no { text-align: center; font-family: var(--font-num); font-weight: 800; color: var(--muted); }
+.set-no { text-align: center; font-family: var(--font-num); font-weight: 600; color: var(--muted); }
 .set-prev { text-align: center; font-family: var(--font-num); font-size: 14px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .set-in { width: 100%; min-height: 44px; border-radius: 10px; background: var(--bg3); border: 1.5px solid transparent; text-align: center; font-family: var(--font-num); font-size: 18px; font-weight: 700; outline: none; padding: 0 4px; }
 .set-in:focus { border-color: var(--accent); }
@@ -569,72 +569,140 @@ select.input {
 }
 
 /* =========================================================
-   Premium-Ebene (Ferrum)
+   Clean-Ebene (Ferrum 2.1)
+   Flach, ruhig, viel Luft: keine Schatten, keine Rahmen,
+   eine Akzentfarbe, klare Systemschrift.
    ========================================================= */
-body::before {
-  content: ""; position: fixed; left: -20%; right: -20%; top: -30%; height: 70%;
-  background: radial-gradient(55% 55% at 50% 0%, rgba(231, 182, 76, .09), transparent 72%);
-  pointer-events: none;
+:root {
+  --bg: #0D0E10;
+  --bg2: #17181B;
+  --bg3: #222327;
+  --bg4: #2E3035;
+  --line: rgba(255, 255, 255, .07);
+  --text: #F5F5F7;
+  --muted: #8D9099;
+  --dim: #5A5D65;
+  --accent: #E8B65A;
+  --accent-2: #F0C878;
+  --ink: #17120A;
+  --gold: #E8B65A;
+  --r-lg: 20px;
+  --r-md: 16px;
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Inter, Roboto, sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Inter, Roboto, sans-serif;
+  --font-num: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Inter, Roboto, sans-serif;
 }
+.num, .ring-center .v, .sum-kcal, .food-hero .kcal, .water-num, .kpi b, .stat b, .rest-time, .li-end .big { font-variant-numeric: tabular-nums; }
 
-.page-title { font-family: var(--serif); font-weight: 600; font-size: 36px; letter-spacing: -.012em; }
-.section-title { font-weight: 650; letter-spacing: -.005em; }
-.next-card h2, .ws-head .t b, .sheet-title { letter-spacing: -.01em; }
-.next-card h2 { font-family: var(--serif); font-weight: 600; font-size: 34px; }
+/* Typografie */
+.page-head { margin: 10px 0 22px; }
+.page-title { font-family: var(--font-display); font-size: 32px; font-weight: 700; letter-spacing: -.028em; }
+.page-sub { font-size: 15px; margin-top: 2px; }
+.section-title { font-size: 18px; font-weight: 600; letter-spacing: -.015em; margin: 32px 4px 10px; }
+.section-title .link { font-size: 15px; font-weight: 500; }
+.card-title { font-weight: 600; letter-spacing: -.01em; }
+.next-card h2 { font-family: var(--font-display); font-size: 30px; font-weight: 700; letter-spacing: -.028em; }
+.next-card .eyebrow { font-weight: 500; }
+.sheet-title { font-weight: 700; letter-spacing: -.02em; }
+.ring-center .v, .sum-kcal, .food-hero .kcal, .water-num, .kpi b, .stat b, .rest-time, .li-end .big { font-weight: 700; letter-spacing: -.02em; }
+.hero-rings .ring-center .v { font-size: 44px; letter-spacing: -.035em; }
+.macro-ring .ring-center .v { font-size: 18px; font-weight: 650; }
+.macro-ring .name { font-size: 13.5px; font-weight: 600; }
+.li-title { font-weight: 500; }
+.btn { font-weight: 600; letter-spacing: -.01em; }
 
-.card, .list, .meal, .sum-card, .next-card, .tile, .ex-card {
-  border: 1px solid rgba(255, 255, 255, .035);
-  box-shadow: var(--hair), var(--lift);
+/* Flächen: keine Rahmen, keine Schatten */
+.card, .list, .meal, .sum-card, .next-card, .tile, .ex-card { border: 0; box-shadow: none; }
+.card, .sum-card, .next-card { padding: 18px; }
+.next-card::before { display: none; }
+.list-item { border-bottom: 0; position: relative; }
+.list-item + .list-item::before, .meal .list-item::before {
+  content: ""; position: absolute; top: 0; left: 16px; right: 0; height: 1px; background: var(--line);
 }
-.sheet-body .card, .sheet-body .list { border-color: rgba(255, 255, 255, .03); box-shadow: var(--hair); }
+.meal .list-item { border-top: 0; }
+.sheet-body .list-item { border-bottom: 0; }
 
+/* Buttons & Chips: flach */
+.btn { border-radius: 14px; min-height: 50px; }
 .btn.primary, .chip.on, .icon-btn.accent, .workout-pill, .pr-pop, .toast.ok {
-  background: var(--gold);
-  color: var(--ink);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .45), 0 10px 26px -14px rgba(231, 182, 76, .75);
+  background: var(--accent); color: var(--ink); box-shadow: none;
 }
-.btn.primary:active { filter: brightness(1.06); background: var(--gold); }
-.sheet-body .chip.on { background: var(--gold); }
-.btn { letter-spacing: -.005em; }
+.btn.primary:active { background: var(--accent-2); }
+.btn.small { min-height: 36px; border-radius: 10px; }
+.chip { min-height: 34px; padding: 0 13px; font-weight: 500; font-size: 14px; }
+.chip.on { font-weight: 600; }
+.sheet-body .chip.on { background: var(--accent); }
+.icon-btn { background: var(--bg3); }
+.meal-head .icon-btn { width: 38px; height: 38px; }
+.meal-head .icon-btn svg { width: 20px; height: 20px; }
+.seg { border-radius: 11px; }
+.seg button { font-weight: 500; }
+.seg button.on { font-weight: 600; }
 
-.tab.active::after {
-  content: ""; position: absolute; top: 0; width: 22px; height: 3px; border-radius: 0 0 3px 3px;
-  background: var(--gold);
-}
-.tabbar { background: rgba(15, 17, 21, .78); border-top-color: rgba(255, 255, 255, .05); }
+/* Tab-Leiste */
+.tabbar { background: rgba(13, 14, 16, .82); border-top: 1px solid rgba(255, 255, 255, .06); }
+.tab { font-weight: 500; font-size: 10px; }
+.tab svg { width: 24px; height: 24px; stroke-width: 1.7; }
+.tab.active svg { transform: none; }
+.tab.active::after { display: none; }
 
-.streak { background: rgba(231, 182, 76, .12); }
-.next-card::before { border-color: var(--accent); opacity: .1; border-width: 18px; }
-.sheet { border-radius: 28px 28px 0 0; box-shadow: var(--hair), 0 -20px 50px rgba(0, 0, 0, .55); }
-.sheet-grip { background: rgba(255, 255, 255, .16); }
-.ring-track { stroke: rgba(255, 255, 255, .055); }
-.hero-rings .ring-center .v { letter-spacing: -.03em; }
-.input:focus, .set-in:focus { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(231, 182, 76, .12); }
-.set-row.done .set-check { background: var(--ok); box-shadow: 0 6px 16px -8px rgba(60, 196, 139, .8); }
-.rest-progress i { background: var(--gold); }
-.pr-badge { background: var(--gold); }
+/* Ringe & Balken: dünner */
+.hero-rings > .ring-wrap .ring-svg circle { stroke-width: 12px; }
+.macro-ring .ring-svg circle { stroke-width: 6px; }
+.ring-track { stroke: rgba(255, 255, 255, .06); }
+.bar { height: 6px; border-radius: 3px; }
+.macro-bars { gap: 14px; }
 
-.inline-banner { background: rgba(231, 182, 76, .07) !important; border: 1px solid rgba(231, 182, 76, .16); }
+/* Eingaben */
+.input, select.input { border-radius: 12px; border-width: 1px; }
+.input:focus, .set-in:focus { border-color: var(--accent); box-shadow: none; }
+.set-in { border-width: 1px; font-weight: 600; }
+.set-check { border-radius: 10px; }
+.set-row.done { background: rgba(60, 196, 139, .08); }
+.set-row.done .set-check { box-shadow: none; }
+
+/* Kleinteile */
+.streak { background: var(--bg2); color: var(--accent); font-weight: 600; font-size: 15px; padding: 7px 12px 7px 10px; }
+.streak.cold { color: var(--muted); }
+.streak svg { width: 16px; height: 16px; }
+.pr-badge { background: var(--accent); font-weight: 700; }
+.rest-progress { height: 3px; }
+.rest-progress i { background: var(--accent); }
+.rest-bar, .ws-head { background: rgba(13, 14, 16, .9); }
+.sheet { border-radius: 24px 24px 0 0; box-shadow: none; background: var(--bg2); }
+.sheet-grip { background: rgba(255, 255, 255, .14); }
+.backdrop { background: rgba(0, 0, 0, .6); }
+.toast { background: var(--bg4); font-weight: 500; box-shadow: none; }
+.water { gap: 10px; }
+.water .water-num { font-size: 26px; margin-top: 2px; }
+.water-plus { background: rgba(94, 211, 234, .14); color: var(--water); }
+.meal-head .icon-btn.accent { background: rgba(232, 182, 90, .14); color: var(--accent); }
+.meal-head .icon-btn.plain { color: var(--muted); }
+.food-macros > div, .stat, .kpi { border-radius: 14px; }
+.food-macros b, .stat b { font-weight: 700; }
+.day-label { background: var(--bg2); font-weight: 600; }
+.inline-banner { background: var(--bg2); border: 0; }
 .inline-banner .txt { color: var(--muted); }
-.inline-banner .txt b { color: var(--text); font-weight: 650; }
+.inline-banner .txt b { color: var(--text); font-weight: 600; }
+.workout-pill { font-weight: 600; font-family: var(--font); }
 
 /* Startbildschirm */
 #splash {
   position: fixed; inset: 0; z-index: 200; background: var(--bg);
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
-  transition: opacity .5s var(--ease), visibility 0s linear .5s;
+  transition: opacity .45s var(--ease), visibility 0s linear .45s;
 }
 #splash.out { opacity: 0; visibility: hidden; }
-#splash img { width: 84px; height: 84px; border-radius: 20px; box-shadow: 0 18px 40px -16px rgba(231, 182, 76, .5); animation: splashIn .7s var(--ease) both; }
-#splash span { font-family: var(--serif); font-size: 26px; font-weight: 600; letter-spacing: .02em; color: var(--text); animation: splashIn .7s .08s var(--ease) both; }
-@keyframes splashIn { from { opacity: 0; transform: translateY(8px) scale(.96); } }
+#splash img { width: 76px; height: 76px; border-radius: 18px; animation: splashIn .6s var(--ease) both; }
+#splash span { font-family: var(--font-display); font-size: 22px; font-weight: 700; letter-spacing: -.02em; color: var(--text); animation: splashIn .6s .06s var(--ease) both; }
+@keyframes splashIn { from { opacity: 0; transform: translateY(6px); } }
 
 /* Schnell-Eintrag & Trend */
-.trend-card .big-num { font-family: var(--font-num); font-size: 30px; font-weight: 800; line-height: 1; }
+.trend-card .big-num { font-family: var(--font-num); font-size: 30px; font-weight: 700; line-height: 1; }
 .trend-card .big-num small { font-size: 15px; color: var(--muted); font-weight: 700; }
 .kpi-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 12px 0; }
 .kpi { background: var(--bg3); border-radius: 16px; padding: 12px; }
-.kpi b { display: block; font-family: var(--font-num); font-size: 22px; font-weight: 800; }
+.kpi b { display: block; font-family: var(--font-num); font-size: 22px; font-weight: 700; letter-spacing: -.02em; }
 .kpi span { font-size: 12.5px; color: var(--muted); }
 
 /* Scheibenrechner */
