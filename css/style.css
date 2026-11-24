@@ -733,3 +733,175 @@ html[data-accent="gold"] { --accent: #E8B65A; --accent-2: #F0C878; --accent-soft
 .plate-viz .tip { height: 16px; width: 40px; border-radius: 0 3px 3px 0; background: linear-gradient(#E4E4E4, #8C8F96); }
 .plate-list { text-align: center; font-family: var(--font-num); font-weight: 700; font-size: 17px; }
 .plate-list small { display: block; color: var(--muted); font-weight: 600; font-size: 13px; font-family: var(--font); margin-top: 2px; }
+
+/* =========================================================
+   Apple-Ebene (Ferrum 3.0)
+   Orientiert an iOS: Systemfarben, schwarzer Hintergrund,
+   graue Gruppenflächen, Kapsel-Buttons, schwebende Glas-Tab-Leiste,
+   Ringe wie in der Fitness-App.
+   ========================================================= */
+:root {
+  /* iOS-Systemfarben (Dunkelmodus) */
+  --bg: #000000;
+  --bg2: #1C1C1E;                       /* gruppierte Fläche */
+  --bg3: #2C2C2E;                       /* Fläche in Fläche */
+  --bg4: #3A3A3C;
+  --fill: rgba(118, 118, 128, .24);     /* Eingaben, graue Knöpfe */
+  --fill-2: rgba(118, 118, 128, .32);
+  --line: rgba(84, 84, 88, .55);        /* Trennlinien */
+  --text: #FFFFFF;
+  --muted: rgba(235, 235, 245, .6);     /* sekundärer Text */
+  --dim: rgba(235, 235, 245, .3);       /* tertiärer Text */
+
+  --accent: #0A84FF;                    /* iOS-Blau (Standard) */
+  --accent-2: #409CFF;
+  --accent-soft: rgba(10, 132, 255, .18);
+  --ink: #FFFFFF;                       /* Text auf Akzentfarbe */
+  --gold: var(--accent);
+
+  --prot: #FF375F;                      /* Pink  */
+  --carb: #30D158;                      /* Grün  */
+  --fat: #FFD60A;                       /* Gelb  */
+  --water: #64D2FF;                     /* Cyan  */
+  --ok: #30D158;
+  --danger: #FF453A;
+  --over: #EBEBF5;
+
+  --r-lg: 22px;
+  --r-md: 22px;
+  --tabbar-h: 62px;
+  --glass: rgba(37, 37, 40, .62);
+  --glass-line: rgba(255, 255, 255, .1);
+}
+html[data-accent="indigo"] { --accent: #5E5CE6; --accent-2: #7D7AFF; --accent-soft: rgba(94, 92, 230, .22); --ink: #FFFFFF; }
+html[data-accent="purple"] { --accent: #BF5AF2; --accent-2: #DA8FFF; --accent-soft: rgba(191, 90, 242, .2); --ink: #FFFFFF; }
+html[data-accent="mint"]   { --accent: #63E6E2; --accent-2: #8CF0ED; --accent-soft: rgba(99, 230, 226, .16); --ink: #00201F; }
+html[data-accent="graphite"] { --accent: #E5E5EA; --accent-2: #FFFFFF; --accent-soft: rgba(235, 235, 245, .12); --ink: #000000; }
+
+body { background: #000; }
+body::before { display: none; }
+
+/* Typografie nach iOS */
+.page-head { margin: 8px 0 20px; }
+.page-title { font-size: 34px; font-weight: 700; letter-spacing: -.022em; line-height: 1.1; }
+.page-sub { color: var(--muted); font-size: 15px; }
+.section-title { font-size: 20px; font-weight: 700; letter-spacing: -.02em; margin: 30px 4px 10px; }
+.section-title .link { font-size: 17px; font-weight: 400; color: var(--accent); }
+.card-title { font-size: 17px; font-weight: 600; }
+.card-sub, .li-sub, .hint { color: var(--muted); }
+.li-title { font-size: 17px; font-weight: 400; letter-spacing: -.01em; }
+.li-sub { font-size: 15px; }
+.hint { font-size: 13px; }
+
+/* Gruppierte Flächen */
+.card, .list, .meal, .sum-card, .next-card, .tile, .ex-card { background: var(--bg2); border-radius: var(--r-lg); }
+.list-item { min-height: 52px; padding: 11px 16px; }
+.list-item + .list-item::before, .meal .list-item::before { background: var(--line); height: .5px; left: 16px; }
+.chev { opacity: .35; }
+.sheet-body .list, .sheet-body .card { background: var(--bg3); }
+.sheet-body .list-item::before { background: rgba(84, 84, 88, .45); }
+
+/* Knöpfe: Kapseln */
+.btn { border-radius: 999px; min-height: 50px; font-size: 17px; font-weight: 600; background: var(--fill); color: var(--text); }
+.btn.small { min-height: 34px; padding: 0 14px; font-size: 15px; border-radius: 999px; }
+.btn.primary, .chip.on, .icon-btn.accent, .workout-pill, .pr-pop, .toast.ok { background: var(--accent); color: var(--ink); }
+.btn.primary:active { background: var(--accent-2); }
+.btn.danger { background: rgba(255, 69, 58, .16); color: var(--danger); }
+.btn.ghost { background: transparent; color: var(--accent); font-weight: 400; }
+.icon-btn { background: var(--fill); }
+.icon-btn.plain { background: transparent; color: var(--accent); }
+.chip { background: var(--fill); color: var(--text); font-weight: 500; font-size: 15px; min-height: 34px; }
+.sheet-body .chip { background: var(--fill); }
+.sheet-body .chip.on, .chip.on { background: var(--accent); color: var(--ink); }
+.meal-head .icon-btn.accent { background: var(--accent-soft); color: var(--accent); }
+.meal-head .icon-btn.plain { color: var(--muted); }
+.water-plus { background: rgba(100, 210, 255, .16); color: var(--water); }
+
+/* Segment-Schalter wie iOS */
+.seg { background: var(--fill); border-radius: 9px; padding: 2px; gap: 0; }
+.sheet-body .seg { background: var(--fill); }
+.seg button { min-height: 32px; border-radius: 7px; font-size: 13.5px; font-weight: 500; color: var(--text); }
+.seg button.on, .sheet-body .seg button.on { background: #636366; font-weight: 600; box-shadow: 0 3px 8px rgba(0, 0, 0, .12), 0 3px 1px rgba(0, 0, 0, .04); }
+
+/* Eingabefelder */
+.input, select.input { background: var(--fill); border: 0; border-radius: 12px; min-height: 48px; font-size: 17px; }
+.sheet-body .input, .sheet-body select.input { background-color: var(--fill); }
+.input:focus, .set-in:focus { box-shadow: 0 0 0 2px var(--accent); border: 0; }
+.input::placeholder, .set-in::placeholder { color: var(--dim); }
+.set-in { background: var(--fill); border: 0; border-radius: 10px; font-weight: 600; }
+.field > span { font-size: 13px; font-weight: 400; color: var(--muted); margin-left: 4px; }
+.search-bar .input { min-height: 40px; border-radius: 12px; font-size: 17px; }
+
+/* Schwebende Tab-Leiste aus Glas */
+.tabbar {
+  left: calc(var(--safe-l) + 14px); right: calc(var(--safe-r) + 14px);
+  bottom: calc(var(--safe-b) + 6px);
+  height: var(--tabbar-h);
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  backdrop-filter: blur(24px) saturate(180%);
+  border: .5px solid var(--glass-line);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08), 0 10px 30px rgba(0, 0, 0, .45);
+}
+.tab { height: 100%; border-radius: 999px; color: rgba(235, 235, 245, .6); font-size: 10px; font-weight: 600; gap: 2px; transition: background .25s var(--ease), color .2s; }
+.tab svg { width: 24px; height: 24px; stroke-width: 1.8; }
+.tab.active { color: var(--accent); background: rgba(255, 255, 255, .09); }
+.tab-dot { top: 6px; border-color: #2a2a2d; }
+.view { padding-bottom: calc(var(--safe-b) + var(--tabbar-h) + 60px); }
+.workout-pill { bottom: calc(var(--safe-b) + var(--tabbar-h) + 18px); border-radius: 999px; font-family: var(--font); font-weight: 600; box-shadow: 0 10px 30px rgba(0, 0, 0, .5); }
+
+/* Ringe wie in der Fitness-App */
+.ring-track { opacity: 1; }
+.hero-rings > .ring-wrap .ring-svg circle { stroke-width: 20px; }
+.macro-ring .ring-svg circle { stroke-width: 9px; }
+.hero-rings > .ring-wrap .ring-center .v { font-size: 46px; font-weight: 700; letter-spacing: -.03em; }
+.macro-ring .ring-center .v { font-size: 19px; font-weight: 600; letter-spacing: -.02em; }
+.macro-ring .ring-center .l { font-size: 11px; }
+.ring-center .l { color: var(--muted); font-size: 15px; }
+.ring-center .s { color: var(--muted); }
+.macro-ring .name { font-size: 15px; font-weight: 600; margin-top: 10px; }
+.macro-ring .goal { color: var(--muted); font-size: 13px; }
+
+/* Kleinteile */
+.streak { background: var(--bg2); color: var(--text); font-size: 15px; font-weight: 600; }
+.streak svg { color: #FF9F0A; fill: #FF453A; }
+.streak.cold svg { fill: var(--muted); }
+.day-label { background: var(--bg2); border-radius: 999px; font-size: 17px; }
+.bar { height: 6px; background: rgba(255, 255, 255, .1); }
+.sum-kcal small, .water-num small { color: var(--muted); font-weight: 500; }
+.food-macros > div, .stat, .kpi { background: var(--bg3); border-radius: 16px; }
+.food-macros span, .stat span, .kpi span { color: var(--muted); }
+.inline-banner { background: var(--bg2); border-radius: var(--r-lg); }
+.pr-badge { background: var(--accent); color: var(--ink); border-radius: 999px; padding: 1px 7px; }
+.set-row.done { background: rgba(48, 209, 88, .12); }
+.set-row.done .set-check { background: var(--ok); }
+.set-check { background: var(--fill); border-radius: 999px; }
+
+/* Sheets: große Rundung, grauer Schließen-Knopf wie in Apple-Apps */
+.sheet { background: var(--bg2); border-radius: 34px 34px 0 0; }
+.sheet-grip { width: 36px; height: 5px; background: rgba(235, 235, 245, .3); }
+.sheet-head { padding: 10px 14px 10px 20px; min-height: 52px; }
+.sheet-title { font-size: 20px; font-weight: 700; letter-spacing: -.02em; }
+.sheet-head .icon-btn { width: 30px; height: 30px; background: var(--fill); color: rgba(235, 235, 245, .6); }
+.sheet-head .icon-btn svg { width: 15px; height: 15px; stroke-width: 2.8; }
+.sheet-head .icon-btn.plain { background: transparent; color: var(--accent); width: 36px; height: 36px; }
+.sheet-head .icon-btn.plain svg { width: 22px; height: 22px; stroke-width: 2; }
+.sheet-foot { border-top: 0; background: var(--bg2); }
+.backdrop { background: rgba(0, 0, 0, .5); }
+
+/* Glas-Leisten im Training & Hinweise */
+.ws-head, .rest-bar { background: var(--glass); -webkit-backdrop-filter: blur(24px) saturate(180%); backdrop-filter: blur(24px) saturate(180%); border-color: var(--glass-line); }
+.ws-head .icon-btn { width: 36px; height: 36px; }
+.toast { background: var(--glass); -webkit-backdrop-filter: blur(24px) saturate(180%); backdrop-filter: blur(24px) saturate(180%); border: .5px solid var(--glass-line); border-radius: 999px; font-weight: 600; padding: 12px 20px; }
+.toast.ok { background: var(--accent); color: var(--ink); border: 0; }
+.banner { background: var(--glass); -webkit-backdrop-filter: blur(24px); backdrop-filter: blur(24px); border: .5px solid var(--glass-line); border-radius: 22px; }
+
+/* Schalter: iOS-Grün */
+.switch i { background: var(--fill-2); }
+.switch input:checked + i { background: #30D158; }
+
+/* Farbauswahl */
+.accent-dot { width: 40px; height: 40px; }
+.accent-dot.on { outline-color: #FFFFFF; }

@@ -6,7 +6,7 @@
    Nur dann merkt das iPhone, dass es neue Dateien gibt.
    Deine Daten (IndexedDB) sind davon NICHT betroffen.
    ========================================================= */
-const VERSION = '2.2.0';
+const VERSION = '3.0.0';
 const CACHE = 'ferrum-' + VERSION;
 
 const ASSETS = [

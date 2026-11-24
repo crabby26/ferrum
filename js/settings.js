@@ -11,12 +11,13 @@ const ACTIVITY = [
   [1.9, 'Extrem aktiv (körperliche Arbeit + Training)']
 ];
 const GOALS = [['bulk', 'Muskelaufbau'], ['keep', 'Halten'], ['cut', 'Diät']];
+// Apple-Systemfarben. Pink, Grün, Gelb und Cyan sind für Protein, Kohlenhydrate, Fett und Wasser reserviert.
 const ACCENTS = [
-  ['violet', 'Violett', '#9D8CFF'],
-  ['mono', 'Weiß (schlicht)', '#F2F2F5'],
-  ['lime', 'Limette', '#C6F25C'],
-  ['teal', 'Türkis', '#3FD8C4'],
-  ['gold', 'Gold', '#E8B65A']
+  ['blue', 'Blau', '#0A84FF'],
+  ['indigo', 'Indigo', '#5E5CE6'],
+  ['purple', 'Lila', '#BF5AF2'],
+  ['mint', 'Mint', '#63E6E2'],
+  ['graphite', 'Graphit', '#E5E5EA']
 ];
 
 const Settings = {
@@ -35,9 +36,9 @@ const Settings = {
       <div class="section-title" style="margin-top:0">Akzentfarbe</div>
       <div class="card">
         <div class="accent-dots">
-          ${ACCENTS.map(a => `<button class="accent-dot ${(st.accent || 'violet') === a[0] ? 'on' : ''}" data-act="set-accent" data-v="${a[0]}" style="background:${a[2]}" aria-label="${a[1]}"></button>`).join('')}
+          ${ACCENTS.map(a => `<button class="accent-dot ${(document.documentElement.dataset.accent || 'blue') === a[0] ? 'on' : ''}" data-act="set-accent" data-v="${a[0]}" style="background:${a[2]}" aria-label="${a[1]}"></button>`).join('')}
         </div>
-        <p class="hint" id="accent-name" style="margin-top:12px">${(ACCENTS.find(a => a[0] === (st.accent || 'violet')) || ACCENTS[0])[1]}</p>
+        <p class="hint" id="accent-name" style="margin-top:12px">${(ACCENTS.find(a => a[0] === (document.documentElement.dataset.accent || 'blue')) || ACCENTS[0])[1]}</p>
       </div>
 
       <div class="section-title">Tagesziele</div>

@@ -44,7 +44,9 @@ const App = {
     return Date.now() - ref > 7 * 86400000;
   },
   applyAccent() {
-    document.documentElement.dataset.accent = S.settings.accent || 'violet';
+    // Nicht mehr angebotene Farben (aus älteren Versionen) fallen auf iOS-Blau zurück
+    const ok = ACCENTS.some(a => a[0] === S.settings.accent);
+    document.documentElement.dataset.accent = ok ? S.settings.accent : 'blue';
   },
   updateBackupDot() { $('#settings-dot').hidden = !App.needsBackup(); },
 
@@ -69,7 +71,7 @@ const App = {
     const rest = st.kcal - t.kcal;
     const over = t.kcal > st.kcal * 1.05;
 
-    const big = U.ring(212, 18, t.kcal / st.kcal, over ? 'var(--over)' : 'var(--accent)', `
+    const big = U.ring(212, 20, t.kcal / st.kcal, over ? 'var(--over)' : 'var(--accent)', `
       <div class="v" data-count="${Math.round(Math.abs(rest))}">${U.n(Math.abs(rest))}</div>
       <div class="l">${rest >= 0 ? 'kcal übrig' : 'kcal über Ziel'}</div>
       <div class="s">${U.n(t.kcal)} von ${U.n(st.kcal)}</div>`);

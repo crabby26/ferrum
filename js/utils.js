@@ -140,7 +140,7 @@ const U = {
     const p = U.clamp(pct || 0, 0, 1);
     return `<div class="ring-wrap" style="width:${size}px;height:${size}px">
       <svg class="ring-svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" style="transform:rotate(-90deg)">
-        <circle class="ring-track" cx="${size / 2}" cy="${size / 2}" r="${r}" stroke-width="${stroke}"/>
+        <circle class="ring-track" cx="${size / 2}" cy="${size / 2}" r="${r}" stroke-width="${stroke}" style="stroke:${color};opacity:.2"/>
         <circle class="ring-bar" cx="${size / 2}" cy="${size / 2}" r="${r}" stroke-width="${stroke}"
           style="stroke:${color}" stroke-dasharray="${c}" stroke-dashoffset="${c}" data-target="${c * (1 - p)}"/>
       </svg>
@@ -326,8 +326,8 @@ const U = {
   confetti() {
     const box = document.createElement('div');
     box.className = 'confetti';
-    const acc = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#9D8CFF';
-    const colors = [acc, acc, '#F5F5F7', '#4C9DFF', '#3CC48B', '#FF6B6B'];
+    const acc = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#0A84FF';
+    const colors = [acc, acc, '#FFFFFF', '#FF375F', '#30D158', '#FFD60A', '#64D2FF'];
     let html = '';
     for (let i = 0; i < 70; i++) {
       const left = Math.random() * 100;
