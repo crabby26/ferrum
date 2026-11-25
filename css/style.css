@@ -1362,3 +1362,56 @@ body::before {
 /* „Was fehlt noch?“ kompakt */
 .sug-row-compact .quick-title b { color: var(--text); font-weight: 600; }
 .sug-chip .qc-plus { background: var(--accent-soft); }
+
+/* =========================================================
+   Schlicht (Ferrum 6.3)
+   Ruhig und flach: keine Lichtkanten, kein Glanz, kein Farb-
+   schimmer. Glas nur bei schwebenden Elementen (Tab-Leiste,
+   Fenster, Meldungen). Übersichtlicher Aufbau bleibt.
+   ========================================================= */
+body::before { background: radial-gradient(90% 35% at 50% -10%, rgba(255, 255, 255, .05), transparent 70%), #000; }
+.workout-screen::before { background: #000; }
+
+/* Keine Lichtkanten mehr */
+.card::before, .list::before, .meal::before, .sum-card::before, .next-card::before, .ex-card::before,
+.inline-banner::before, .tile::before, .tabbar::before, .sheet::before, .quick-chip::before, .btn.primary::before { display: none; }
+
+/* Flache, ruhige Flächen */
+.card, .list, .meal, .sum-card, .next-card, .ex-card, .inline-banner, .tile {
+  background: rgba(255, 255, 255, .055);
+  border: .5px solid rgba(255, 255, 255, .07);
+  box-shadow: none;
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+  border-radius: 22px;
+}
+.sheet-body .card, .sheet-body .list { background: rgba(255, 255, 255, .05); border: .5px solid rgba(255, 255, 255, .06); box-shadow: none; }
+.food-macros > div, .stat, .kpi { background: rgba(255, 255, 255, .05); box-shadow: none; }
+.list-item + .list-item::before, .meal .list-item::before { background: rgba(255, 255, 255, .07); }
+
+/* Flache Bedienelemente */
+.btn, .icon-btn, .chip, .seg, .quick-chip, .day-label, .streak, .input, select.input, .set-in, .set-check, .amount-field {
+  background: rgba(255, 255, 255, .08);
+  box-shadow: none;
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+  border: 0;
+}
+.icon-btn.plain { background: transparent; }
+.input:focus, .set-in:focus, .amount-field:focus-within { box-shadow: 0 0 0 1.5px var(--accent); }
+.btn.primary, .chip.on, .sheet-body .chip.on, .icon-btn.accent, .workout-pill, .toast.ok {
+  background: var(--accent); color: var(--ink); box-shadow: none;
+}
+.btn.primary:active { background: var(--accent-2); }
+.meal-head .icon-btn.accent { background: var(--accent-soft); color: var(--accent); box-shadow: none; }
+.set-row.done .set-check { background: var(--ok); box-shadow: none; }
+.seg button.on, .sheet-body .seg button.on { background: rgba(255, 255, 255, .16); box-shadow: none; }
+
+/* Glas nur bei schwebenden Elementen – zurückhaltend */
+.tabbar { background: rgba(28, 28, 30, .72); box-shadow: 0 10px 30px rgba(0, 0, 0, .5); border: .5px solid rgba(255, 255, 255, .08); }
+.tab.active { background: rgba(255, 255, 255, .1); box-shadow: none; }
+.sheet { background: rgba(26, 26, 28, .94); box-shadow: none; border-top: .5px solid rgba(255, 255, 255, .08); }
+.ws-head, .rest-bar, .toast, .banner { background: rgba(28, 28, 30, .85); box-shadow: 0 8px 24px rgba(0, 0, 0, .35); }
+.workout-pill { box-shadow: 0 8px 24px rgba(0, 0, 0, .45); }
+
+/* Einstellungen: dezentere Symbole */
+.set-icon { box-shadow: none; }
+.profile-card img { box-shadow: none; }
