@@ -9,7 +9,19 @@ const App = {
   reg: null,
   lastToday: U.today(),
 
+  /* ---------- App-Modus: Ernährung, Training oder beides ---------- */
+  mode() { const m = S.settings && S.settings.mode; return m === 'food' || m === 'train' ? m : 'both'; },
+  hasFood() { return App.mode() !== 'train'; },
+  hasTrain() { return App.mode() !== 'food'; },
+  tabAllowed(tab) { return !((tab === 'food' && !App.hasFood()) || (tab === 'train' && !App.hasTrain())); },
+  applyMode() {
+    document.documentElement.dataset.mode = App.mode();
+    $$('.tab').forEach(t => { t.hidden = !App.tabAllowed(t.dataset.tab); });
+    if (!App.tabAllowed(App.tab)) App.go('today');
+  },
+
   go(tab) {
+    if (!App.tabAllowed(tab)) tab = 'today';
     if (App.tab === tab) {
       const v = $('#view-' + tab);
       if (v.scrollTop > 0) { v.scrollTo({ top: 0, behavior: 'smooth' }); return; }
@@ -130,16 +142,42 @@ const App = {
 
     const showInstall = App.isIOS() && !App.isStandalone() && !S.meta.hideInstall;
     const now = new Date();
+    const food = App.hasFood(), training = App.hasTrain();
+
+    // Nur Training: Wochenüberblick statt Kalorien
+    let weekCard = '';
+    let weekCount = 0;
+    if (!food) {
+      const ws = U.weekStart(day);
+      const wos = S.workouts.filter(w => w.date >= ws);
+      weekCount = wos.length;
+      const last = Train.workoutsSorted()[0];
+      const sets = wos.reduce((a, w) => a + Train.setCount(w), 0);
+      const prs = wos.reduce((a, w) => a + Train.prCount(w), 0);
+      const planned = Train.schedule() ? [0, 1, 2, 3, 4, 5, 6].filter(i => { const p = Train.plannedFor(U.addDays(ws, i)); return p && p !== 'rest'; }).length : null;
+      weekCard = `<div class="card">
+        <div class="card-title">Diese Woche</div>
+        <div class="stat-row" style="margin-bottom:0">
+          <div class="stat"><b>${wos.length}${planned != null ? ' / ' + planned : ''}</b><span>Workouts</span></div>
+          <div class="stat"><b>${sets}</b><span>${sets === 1 ? 'Satz' : 'Sätze'}</span></div>
+          <div class="stat"><b>${prs}</b><span>${prs === 1 ? 'Rekord' : 'Rekorde'}</span></div>
+        </div>
+        ${last ? `<p class="hint" style="margin:12px 0 0">Zuletzt: ${U.esc(last.name)}, ${U.fmtDay(last.date)}</p>` : ''}
+      </div>
+      <button class="btn block" data-act="handle-go" data-go="weigh" style="margin-bottom:12px">Gewicht eintragen</button>`;
+    }
 
     el.innerHTML = `
       <div class="page-head">
         <div><h1 class="page-title">Heute</h1><div class="page-sub">${U.WD[now.getDay()].replace('.', '')}, ${now.getDate()}. ${U.MON[now.getMonth()]}</div></div>
-        <div class="streak ${streak.n ? '' : 'cold'}" title="Tage in Folge getrackt">${U.icon.flame}${streak.n} ${streak.n === 1 ? 'Tag' : 'Tage'}</div>
+        ${food
+          ? `<div class="streak ${streak.n ? '' : 'cold'}" title="Tage in Folge getrackt">${U.icon.flame}${streak.n} ${streak.n === 1 ? 'Tag' : 'Tage'}</div>`
+          : `<div class="streak ${weekCount ? '' : 'cold'}" title="Workouts diese Woche">${U.icon.flame}${weekCount} diese Woche</div>`}
       </div>
       ${showInstall ? `<div class="inline-banner"><div class="txt"><b>Als App installieren</b>Tippe unten in Safari auf „Teilen“ und dann auf „Zum Home-Bildschirm“.</div><button class="icon-btn plain" data-act="hide-install" aria-label="Ausblenden">${U.icon.close}</button></div>` : ''}
       ${now.getDay() === 0 && S.meta.lastCheckin !== day ? `<div class="inline-banner"><div class="txt"><b>Dein Wochen-Check-in</b>Training, Ernährung und Gewicht der letzten 7 Tage.</div><button class="btn small primary" data-act="checkin">Ansehen</button></div>` : ''}
       ${App.needsBackup() ? `<div class="inline-banner"><div class="txt"><b>Backup fällig</b>${S.meta.lastBackup ? 'Dein letztes Backup ist älter als 7 Tage.' : 'Sichere deine Daten einmal pro Woche.'}</div><button class="btn small primary" data-act="backup">Sichern</button></div>` : ''}
-      <div class="hero-rings">
+      ${food ? `<div class="hero-rings">
         ${big}
         <div class="macro-rings">
           ${mr(t.p, st.protein, 'var(--prot)', 'Protein')}
@@ -149,10 +187,11 @@ const App = {
       </div>
       <button class="btn primary block" data-act="quick-add" style="margin:18px 0 12px">${U.icon.plus} Essen eintragen</button>
       ${Nutri.quickRow(day)}
-      ${FoodPro.fastCard()}
-      ${train}
-      ${Nutri.waterCard(day)}
-      ${streak.n && !streak.today ? `<p class="hint" style="text-align:center">Trag heute etwas ein, damit deine Serie von ${streak.n} ${streak.n === 1 ? 'Tag' : 'Tagen'} weiterläuft.</p>` : ''}
+      ${FoodPro.fastCard()}` : ''}
+      ${training ? train : ''}
+      ${weekCard}
+      ${food ? Nutri.waterCard(day) : ''}
+      ${food && streak.n && !streak.today ? `<p class="hint" style="text-align:center">Trag heute etwas ein, damit deine Serie von ${streak.n} ${streak.n === 1 ? 'Tag' : 'Tagen'} weiterläuft.</p>` : ''}
     `;
     U.animateRings(el);
     // Zahlen nur beim ersten Öffnen hochzählen lassen
@@ -216,6 +255,7 @@ const App = {
     Object.assign(App.actions, {
       'go': el => App.go(el.dataset.tab),
       'checkin': () => Progress.checkin(),
+      'handle-go': el => App.handleGo(el.dataset.go),
       'quick-add': () => Nutri.openPicker({ mode: 'log', meal: App.mealByTime(), day: U.today() }),
       'instant': el => {
         const f = S.meta.recents.find(r => r.id === el.dataset.id);
@@ -280,6 +320,7 @@ const App = {
     }
     App.applyAccent();
     App.bind();
+    App.applyMode();
     App.go('today');
     Train.resume();
     App.updateBackupDot();

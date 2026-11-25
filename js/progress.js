@@ -103,7 +103,7 @@ const Progress = {
         </div>`).join('')}</div>
         ${ws.length > 5 ? `<button class="btn ghost block" data-act="weight-all">${Progress.showAll ? 'Weniger anzeigen' : 'Alle Einträge anzeigen'}</button>` : ''}` : ''}
 
-      <div class="section-title">Ernährung pro Woche</div>
+      ${App.hasFood() ? `<div class="section-title">Ernährung pro Woche</div>
       <div class="card">
         <div class="card-title">Kalorien</div><div class="card-sub" style="margin-bottom:10px">Durchschnitt pro getracktem Tag, gestrichelt dein Ziel</div>
         <div id="ch-kcal"></div>
@@ -111,9 +111,9 @@ const Progress = {
       <div class="card">
         <div class="card-title">Protein</div><div class="card-sub" style="margin-bottom:10px">Durchschnitt in g pro getracktem Tag</div>
         <div id="ch-prot"></div>
-      </div>
+      </div>` : ''}
 
-      <div class="section-title">Kraftentwicklung</div>
+      ${App.hasTrain() ? `<div class="section-title">Kraftentwicklung</div>
       <div class="card">
         ${exWithHist.length ? `<select class="input" id="pr-ex" style="margin-bottom:12px">
           ${exWithHist.sort((a, b) => a.name.localeCompare(b.name, 'de')).map(e => `<option value="${e.id}" ${e.id === Progress.exId ? 'selected' : ''}>${U.esc(e.name)}</option>`).join('')}
@@ -122,7 +122,7 @@ const Progress = {
         <div id="ch-str"></div>
         <p class="hint">Geschätztes 1RM (Epley-Formel) aus deinem besten Satz pro Training.</p>`
         : '<div class="chart-empty">Sobald du Workouts mit Gewicht gespeichert hast, siehst du hier deine Kraftentwicklung.</div>'}
-      </div>
+      </div>` : ''}
     `;
     const sel = $('#pr-ex', el);
     if (sel) sel.addEventListener('change', () => { Progress.exId = sel.value; Progress.drawStrength(); });
@@ -151,10 +151,12 @@ const Progress = {
     const ref = Progress.trendAt(tr, U.addDays(last.id, -14));
     const days = Math.min(14, U.daysBetween(tr[0].id, last.id)) || 1;
     const weekly = (last.trend - ref) / days * 7;
-    const ex = Progress.expenditure();
+    const ex = App.hasFood() ? Progress.expenditure() : { need: 'nofood' };
     const st = S.settings;
     let exp;
-    if (ex.tdee) {
+    if (ex.need === 'nofood') {
+      exp = '</div>';
+    } else if (ex.tdee) {
       const g = calcGoals(Object.assign({}, st, { weight: Progress.latestWeight() || st.weight, tdeeOverride: ex.tdee }));
       exp = `<div class="kpi" style="grid-column:1/-1">
           <b>${U.n(ex.tdee)} kcal</b><span>Dein echter Tagesverbrauch, berechnet aus ${ex.logged} Tagen Essen und deinem Gewichtstrend (Formel sagt ${U.n(calcGoals(st).tdee)} kcal)</span>
@@ -166,7 +168,7 @@ const Progress = {
     }
     const goalTxt = st.goal === 'bulk' ? 'Für sauberen Aufbau sind etwa +0,1 bis +0,3 kg pro Woche ideal.' : st.goal === 'cut' ? 'In der Diät sind etwa −0,3 bis −0,7 kg pro Woche ein gutes Tempo.' : '';
     return `<div class="card trend-card">
-      <div class="card-title">Trend & Verbrauch</div>
+      <div class="card-title">${App.hasFood() ? 'Trend & Verbrauch' : 'Gewichtstrend'}</div>
       <div class="kpi-row">
         <div class="kpi"><b>${U.n(last.trend, 1)} kg</b><span>Trendgewicht</span></div>
         <div class="kpi"><b>${weekly > 0 ? '+' : ''}${U.n(weekly, 2)} kg</b><span>pro Woche</span></div>
@@ -207,7 +209,7 @@ const Progress = {
   checkin() {
     const st = S.settings;
     const w = Progress.weekStats();
-    const ex = Progress.expenditure();
+    const ex = App.hasFood() ? Progress.expenditure() : { need: 'nofood' };
     const pct = (v, g) => g ? Math.round(v / g * 100) : 0;
     let advice = '';
     if (w.weightDiff != null) {
@@ -225,28 +227,28 @@ const Progress = {
       title: 'Wochen-Check-in',
       full: true,
       body: `<p class="hint" style="margin:-2px 2px 14px">Die letzten 7 Tage, ${U.fmtShort(U.addDays(U.today(), -6))} bis ${U.fmtShort(U.today())}</p>
-        <div class="card">
+        ${App.hasTrain() ? `<div class="card">
           <div class="card-title">Training</div>
           <div class="kpi-row">
             <div class="kpi"><b>${w.workouts}${w.planned != null ? ' / ' + w.planned : ''}</b><span>Workouts${w.planned != null ? ' (geplant)' : ''}</span></div>
             <div class="kpi"><b>${w.sets}</b><span>Arbeitssätze, ${w.prs} ${w.prs === 1 ? 'Rekord' : 'Rekorde'}</span></div>
           </div>
-        </div>
-        <div class="card">
+        </div>` : ''}
+        ${App.hasFood() ? `<div class="card">
           <div class="card-title">Ernährung</div>
           <div class="kpi-row">
             <div class="kpi"><b>${w.logged ? U.n(w.kcal) : '–'}</b><span>Ø kcal (${pct(w.kcal, st.kcal)} % vom Ziel)</span></div>
             <div class="kpi"><b>${w.logged ? U.n(w.prot) + ' g' : '–'}</b><span>Ø Protein (${pct(w.prot, st.protein)} %)</span></div>
           </div>
           <p class="hint" style="margin:0">${w.logged} von 7 Tagen eingetragen.</p>
-        </div>
+        </div>` : ''}
         <div class="card">
           <div class="card-title">Gewicht & Verbrauch</div>
           <div class="kpi-row">
             <div class="kpi"><b>${w.weightNow != null ? U.n(w.weightNow, 1) + ' kg' : '–'}</b><span>Trendgewicht</span></div>
             <div class="kpi"><b>${w.weightDiff != null ? (w.weightDiff > 0 ? '+' : '') + U.n(w.weightDiff, 2) + ' kg' : '–'}</b><span>diese Woche</span></div>
           </div>
-          ${ex.tdee ? `<p class="hint" style="margin:0">Dein echter Verbrauch: ${U.n(ex.tdee)} kcal pro Tag.</p>` : '<p class="hint" style="margin:0">Für die Verbrauchsberechnung brauchst du 2 Wochen Gewichts- und Essensdaten.</p>'}
+          ${ex.tdee ? `<p class="hint" style="margin:0">Dein echter Verbrauch: ${U.n(ex.tdee)} kcal pro Tag.</p>` : ex.need === 'nofood' ? '' : '<p class="hint" style="margin:0">Für die Verbrauchsberechnung brauchst du 2 Wochen Gewichts- und Essensdaten.</p>'}
           ${advice ? `<p style="margin:10px 0 0;font-weight:500">${advice}</p>` : ''}
           ${goalBtn}
         </div>

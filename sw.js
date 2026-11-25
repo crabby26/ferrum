@@ -6,7 +6,7 @@
    Nur dann merkt das iPhone, dass es neue Dateien gibt.
    Deine Daten (IndexedDB) sind davon NICHT betroffen.
    ========================================================= */
-const VERSION = '6.0.1';
+const VERSION = '6.1.0';
 const CACHE = 'ferrum-' + VERSION;
 
 const ASSETS = [
@@ -144,6 +144,8 @@ async function buildMessage(type) {
   const today = localKey(new Date());
   if (!data) return { title: 'Ferrum', body: 'Öffne Ferrum, um deinen Tag zu planen.', go: 'today' };
   const st = settingsOf(data);
+  // App-Modus: Ernährung, Training oder beides
+  const mode = st.mode === 'food' || st.mode === 'train' ? st.mode : 'both';
 
   if (type === 'weigh') {
     const ws = (data.weights || []).slice().sort((a, b) => (a.id < b.id ? -1 : 1));
@@ -174,10 +176,11 @@ async function buildMessage(type) {
       prev = w.id;
       if (w.id <= addDays(today, -7)) tThen = t;
     });
-    const parts = [`${wos} ${wos === 1 ? 'Workout' : 'Workouts'}`];
-    if (n) parts.push(`Ø ${fmt(avg)} kcal`);
+    const parts = [];
+    if (mode !== 'food') parts.push(`${wos} ${wos === 1 ? 'Workout' : 'Workouts'}`);
+    if (n && mode !== 'train') parts.push(`Ø ${fmt(avg)} kcal`);
     if (t != null && tThen != null) { const d = t - tThen; parts.push(`Gewicht ${d > 0 ? '+' : ''}${fmt(d, 1)} kg`); }
-    return { title: 'Dein Wochen-Check-in 📊', body: parts.join(', ') + '. Tippe für die Auswertung.', go: 'checkin' };
+    return { title: 'Dein Wochen-Check-in 📊', body: (parts.length ? parts.join(', ') + '. ' : '') + 'Tippe für die Auswertung.', go: 'checkin' };
   }
 
   // type === 'day'
@@ -186,20 +189,25 @@ async function buildMessage(type) {
   // Tagesziel: an Trainingstagen mehr, an Ruhetagen weniger (wie in der App)
   let kcal = +st.kcal || 0;
   const planned = !!(st.schedule && st.schedule.on && p.tpl);
-  if (st.cycle && st.cycle.on) kcal += (trained || planned) ? (+st.cycle.train || 0) : -(+st.cycle.rest || 0);
-  const goal = `Ziel: ${fmt(kcal)} kcal, ${fmt(st.protein || 0)} g Protein`;
-  if (trained) return { title: 'Heute schon trainiert ✅', body: goal + '.', go: 'today' };
-  if (p.none) return { title: 'Guten Morgen 💪', body: goal + '.', go: 'today' };
+  if (st.cycle && st.cycle.on && mode === 'both') kcal += (trained || planned) ? (+st.cycle.train || 0) : -(+st.cycle.rest || 0);
+  // Nur Ernährung: nur die Tagesziele
+  if (mode === 'food') {
+    return { title: 'Guten Morgen ☀️', body: `Dein Ziel heute: ${fmt(kcal)} kcal, ${fmt(st.protein || 0)} g Protein, ${fmt(st.carbs || 0)} g Kohlenhydrate, ${fmt(st.fat || 0)} g Fett.`, go: 'today' };
+  }
+  const goal = mode === 'train' ? '' : `Ziel: ${fmt(kcal)} kcal, ${fmt(st.protein || 0)} g Protein.`;
+  const join = (...a) => a.filter(Boolean).join(' ');
+  if (trained) return { title: 'Heute schon trainiert ✅', body: goal || 'Stark! Gönn dir die Erholung.', go: 'today' };
+  if (p.none) return { title: 'Guten Morgen 💪', body: goal || 'Öffne Ferrum, um dein Training zu planen.', go: 'today' };
   if (p.rest) {
-    const nxt = p.next ? (p.inDays === 1 ? `Morgen: ${p.next.name}` : `${WD[weekday(p.nextKey)]}: ${p.next.name}`) : '';
-    return { title: 'Heute Ruhetag 😌', body: goal + '.' + (nxt ? ' ' + nxt + '.' : ''), go: 'today' };
+    const nxt = p.next ? (p.inDays === 1 ? `Morgen: ${p.next.name}.` : `${WD[weekday(p.nextKey)]}: ${p.next.name}.`) : '';
+    return { title: 'Heute Ruhetag 😌', body: join(goal, nxt) || 'Erholung gehört zum Muskelaufbau.', go: 'today' };
   }
   const names = (p.tpl.exercises || []).map(x => {
     const e = (data.exercises || []).find(ex => ex.id === x.exId);
     return e ? e.name : null;
   }).filter(Boolean);
-  const ex = names.length ? ' ' + names.slice(0, 3).join(', ') + (names.length > 3 ? ` und ${names.length - 3} weitere.` : '.') : '';
-  return { title: `Heute: ${p.tpl.name} 💪`, body: goal + '.' + ex, go: 'today' };
+  const ex = names.length ? names.slice(0, 3).join(', ') + (names.length > 3 ? ` und ${names.length - 3} weitere.` : '.') : '';
+  return { title: `Heute: ${p.tpl.name} 💪`, body: join(goal, ex) || 'Tippe, um das Workout zu starten.', go: 'today' };
 }
 
 async function showMessage(type) {

@@ -14,6 +14,13 @@ const GOALS = [['bulk', 'Muskelaufbau'], ['keep', 'Halten'], ['cut', 'Diät']];
 // Öffentlicher Schlüssel für Web-Push (der private liegt nur als Secret bei GitHub)
 const PUSH_PUBLIC_KEY = 'BLJcR8jlFdX-LbsExB6DtqSAlCuRnJ9dDUEnqIOH8HYxCq-8k8hgq7nZOFdiJuSfQYRrag2jkktWhPpGPiM21mA';
 
+// Was die App zeigt
+const MODES = [
+  ['both', 'Beides', 'Ernährung und Training – alle Funktionen.'],
+  ['food', 'Ernährung', 'Nur Ernährung: Training wird ausgeblendet, deine Trainingsdaten bleiben gespeichert.'],
+  ['train', 'Training', 'Nur Training: Ernährung wird ausgeblendet, deine Ernährungsdaten bleiben gespeichert.']
+];
+
 // Apple-Systemfarben. Pink, Grün, Gelb und Cyan sind für Protein, Kohlenhydrate, Fett und Wasser reserviert.
 const ACCENTS = [
   ['blue', 'Blau', '#0A84FF'],
@@ -28,6 +35,7 @@ const Settings = {
     const el = $('#view-settings');
     const st = S.settings;
     const lb = S.meta.lastBackup;
+    const food = App.hasFood(), training = App.hasTrain();
     const macroKcal = st.protein * 4 + st.carbs * 4 + st.fat * 9;
     const num = (id, val, label, unit, dec = 0) => `<label class="field"><span>${label}${unit ? ' (' + unit + ')' : ''}</span>
       <input class="input num" data-set="${id}" inputmode="${dec ? 'decimal' : 'numeric'}" value="${U.n(val, dec).replace(/\./g, '')}"></label>`;
@@ -36,15 +44,25 @@ const Settings = {
       <div class="page-head"><h1 class="page-title">Einstellungen</h1></div>
       ${App.needsBackup() ? `<div class="inline-banner"><div class="txt"><b>Zeit für ein Backup</b>${lb ? 'Dein letztes Backup ist älter als 7 Tage.' : 'Du hast noch nie ein Backup gemacht.'}</div><button class="btn small primary" data-act="backup">Sichern</button></div>` : ''}
 
-      <div class="section-title" style="margin-top:0">Akzentfarbe</div>
+      <div class="section-title" style="margin-top:0">Was möchtest du tracken?</div>
+      <div class="card">
+        <div class="seg" style="margin:0">${MODES.map(m => `<button data-act="set-mode" data-v="${m[0]}" class="${App.mode() === m[0] ? 'on' : ''}">${m[1]}</button>`).join('')}</div>
+        <p class="hint" style="margin:10px 2px 0">${(MODES.find(m => m[0] === App.mode()) || MODES[0])[2]}</p>
+      </div>
+
+      <div class="section-title">Darstellung</div>
       <div class="card">
         <div class="accent-dots">
           ${ACCENTS.map(a => `<button class="accent-dot ${(document.documentElement.dataset.accent || 'blue') === a[0] ? 'on' : ''}" data-act="set-accent" data-v="${a[0]}" style="background:${a[2]}" aria-label="${a[1]}"></button>`).join('')}
         </div>
         <p class="hint" id="accent-name" style="margin-top:12px">${(ACCENTS.find(a => a[0] === (document.documentElement.dataset.accent || 'blue')) || ACCENTS[0])[1]}</p>
+        <div style="display:flex;align-items:center;gap:12px;margin-top:14px">
+          <div style="flex:1"><b>Haptisches Feedback</b><div class="hint" style="margin:2px 0 0">Kurzes Klopfen beim Abhaken und Eintragen (ab iOS 18).</div></div>
+          <label class="switch"><input type="checkbox" data-set="haptics" ${st.haptics !== false ? 'checked' : ''}><i></i></label>
+        </div>
       </div>
 
-      <div class="section-title">Tagesziele</div>
+      ${food ? `<div class="section-title">Tagesziele</div>
       <div class="card">
         <div class="grid2">
           ${num('kcal', st.kcal, 'Kalorien', 'kcal')}
@@ -61,15 +79,15 @@ const Settings = {
 
       <div class="section-title">Ernährung</div>
       <div class="card">
-        <div style="display:flex;align-items:center;gap:12px">
+        ${training ? `<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
           <div style="flex:1"><b>Trainingstage: mehr Kalorien</b><div class="hint" style="margin:2px 0 0">An Trainingstagen mehr, an Ruhetagen weniger essen (über die Kohlenhydrate). Trainingstage kommen aus deinem Wochenplan oder einem gespeicherten Workout.</div></div>
           <label class="switch"><input type="checkbox" data-set="cycle-on" ${st.cycle && st.cycle.on ? 'checked' : ''}><i></i></label>
         </div>
         ${st.cycle && st.cycle.on ? `<div class="grid2" style="margin-top:12px">
           ${num('cycle-train', st.cycle.train, 'Trainingstag +', 'kcal')}
           ${num('cycle-rest', st.cycle.rest, 'Ruhetag −', 'kcal')}
-        </div>` : ''}
-        <div style="display:flex;align-items:center;gap:12px;margin-top:16px">
+        </div>` : ''}` : ''}
+        <div style="display:flex;align-items:center;gap:12px">
           <div style="flex:1"><b>Intervallfasten</b><div class="hint" style="margin:2px 0 0">Fasten-Timer auf „Heute“ und unter Ernährung. Endet automatisch, sobald du etwas einträgst.</div></div>
           <label class="switch"><input type="checkbox" data-set="fast-on" ${st.fast && st.fast.on ? 'checked' : ''}><i></i></label>
         </div>
@@ -94,9 +112,9 @@ const Settings = {
           <div class="seg" style="margin:0">${GOALS.map(g => `<button data-act="set-seg" data-k="goal" data-v="${g[0]}" class="${st.goal === g[0] ? 'on' : ''}">${g[1]}</button>`).join('')}</div>
         </div>
         <div id="calc-out"></div>
-      </div>
+      </div>` : ''}
 
-      <div class="section-title">Training</div>
+      ${training ? `<div class="section-title">Training</div>
       <div class="card">
         <label class="field"><span>Standard-Pause zwischen Sätzen</span>
           <select class="input" data-set="rest">${[45, 60, 90, 120, 150, 180, 240, 300].map(s => `<option value="${s}" ${+st.rest === s ? 'selected' : ''}>${U.fmtDur(s * 1000)} min</option>`).join('')}</select>
@@ -109,11 +127,7 @@ const Settings = {
           <div style="flex:1"><b>Ton am Ende der Pause</b><div class="hint" style="margin:2px 0 0">Bei eingeschaltetem Stummschalter ist der Ton nicht zu hören.</div></div>
           <label class="switch"><input type="checkbox" data-set="sound" ${st.sound !== false ? 'checked' : ''}><i></i></label>
         </div>
-        <div style="display:flex;align-items:center;gap:12px;margin-top:14px">
-          <div style="flex:1"><b>Haptisches Feedback</b><div class="hint" style="margin:2px 0 0">Kurzes Klopfen beim Abhaken und Eintragen (ab iOS 18).</div></div>
-          <label class="switch"><input type="checkbox" data-set="haptics" ${st.haptics !== false ? 'checked' : ''}><i></i></label>
-        </div>
-      </div>
+      </div>` : ''}
 
       <div class="section-title">Mitteilungen</div>
       <div class="card" id="push-card"><div class="hint">…</div></div>
@@ -128,12 +142,12 @@ const Settings = {
         <p class="hint">Die Tabellen öffnest du mit Numbers oder Excel. Zum Wiederherstellen brauchst du das Backup.</p>
         <input type="file" id="restore-file" hidden>
       </div>
-      <div class="card">
+      ${training ? `<div class="card">
         <div class="card-title">Aus Hevy übernehmen</div>
         <p class="hint" style="margin:4px 0 12px">In Hevy: Profil → Einstellungen → Daten exportieren → Workouts exportieren. Die CSV-Datei hier auswählen. Deine Workouts werden hinzugefügt, nichts wird überschrieben.</p>
         <button class="btn block" data-act="hevy">Hevy-Datei auswählen</button>
         <input type="file" id="hevy-file" hidden>
-      </div>
+      </div>` : ''}
       <div class="card">
         <div class="card-sub" style="margin-bottom:10px">${S.entries.length} Mahlzeiten-Einträge, ${S.workouts.length} Workouts, ${S.weights.length} Gewichtseinträge, ${S.foods.length} eigene Lebensmittel und Rezepte</div>
         <button class="btn danger block" data-act="wipe">Alle Daten löschen</button>
@@ -161,7 +175,7 @@ const Settings = {
   async drawPush() {
     const box = $('#push-card');
     if (!box) return;
-    const title = '<div class="card-title">Erinnerungen</div><div class="push-times"><div><b>7:00</b><span>Wiegen</span></div><div><b>8:00</b><span>Heutiger Trainingstag und Tagesziele</span></div><div><b>So 18:00</b><span>Wochen-Check-in</span></div></div><p class="hint" style="margin:0 0 12px">Der Inhalt wird auf deinem iPhone berechnet, deine Daten verlassen es nicht.</p>';
+    const title = '<div class="card-title">Erinnerungen</div><div class="push-times"><div><b>7:00</b><span>Wiegen</span></div><div><b>8:00</b><span>' + (App.mode() === 'food' ? 'Deine Tagesziele' : App.mode() === 'train' ? 'Heutiger Trainingstag' : 'Heutiger Trainingstag und Tagesziele') + '</span></div><div><b>So 18:00</b><span>Wochen-Check-in</span></div></div><p class="hint" style="margin:0 0 12px">Der Inhalt wird auf deinem iPhone berechnet, deine Daten verlassen es nicht.</p>';
     if (!Settings.pushSupported()) {
       box.innerHTML = title + '<p class="hint" style="margin:0">Funktioniert nur in der installierten App (Safari → Teilen → „Zum Home-Bildschirm“), ab iOS 16.4.</p>';
       return;
@@ -416,6 +430,14 @@ const Settings = {
         S.meta.pushConfirmed = null; Store.saveKV('meta');
         U.toast('Mitteilungen ausgeschaltet');
         Settings.drawPush();
+      },
+      'set-mode': btn => {
+        S.settings.mode = btn.dataset.v;
+        Store.saveKV('settings');
+        App.applyMode();
+        U.haptic();
+        Settings.render();
+        U.toast((MODES.find(m => m[0] === btn.dataset.v) || MODES[0])[1] === 'Beides' ? 'Ernährung und Training aktiv' : 'Nur ' + MODES.find(m => m[0] === btn.dataset.v)[1] + ' aktiv', 'ok');
       },
       'set-accent': btn => {
         S.settings.accent = btn.dataset.v;

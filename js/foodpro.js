@@ -19,7 +19,8 @@ const FoodPro = {
     const st = S.settings;
     const g = { kcal: +st.kcal || 0, protein: +st.protein || 0, carbs: +st.carbs || 0, fat: +st.fat || 0, type: null, delta: 0 };
     const cy = st.cycle;
-    if (!cy || !cy.on) return g;
+    // Ohne Trainingsteil gibt es keine Trainingstage
+    if (!cy || !cy.on || App.mode() === 'food') return g;
     const train = FoodPro.isTrainingDay(day);
     const d = train ? (+cy.train || 0) : -(+cy.rest || 0);
     g.kcal += d;
