@@ -255,6 +255,20 @@ const App = {
   },
 
   async init() {
+    // Fehlt eine Programmdatei (z. B. kurzer Server-Aussetzer beim ersten Laden),
+    // einmal automatisch neu laden statt halb kaputt zu starten
+    const needed = ['DEFAULT_EXERCISES', 'BASIC_FOODS', 'Charts', 'Scanner', 'Nutri', 'FoodPro', 'Train', 'HevyImport', 'Progress', 'Settings'];
+    const missing = needed.filter(n => { try { return typeof eval(n) === 'undefined'; } catch (e) { return true; } });
+    if (missing.length) {
+      if (!sessionStorage.getItem('ferrum-retry')) {
+        sessionStorage.setItem('ferrum-retry', '1');
+        setTimeout(() => location.reload(), 800);
+      } else {
+        document.body.innerHTML = '<div style="padding:60px 24px;text-align:center;color:#fff;font-family:-apple-system,sans-serif"><h2>Ferrum konnte nicht vollständig geladen werden</h2><p style="color:#999">Prüfe deine Internetverbindung, schließe die App und öffne sie erneut.</p></div>';
+      }
+      return;
+    }
+    sessionStorage.removeItem('ferrum-retry');
     try {
       await Store.load();
     } catch (e) {
