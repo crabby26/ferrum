@@ -103,7 +103,8 @@ function defaultSettings() {
   return Object.assign(base, {
     kcal: g.kcal, protein: g.protein, carbs: g.carbs, fat: g.fat,
     waterGoal: 3000, glass: 250,
-    rest: 120, sound: true, haptics: true, bar: 20, accent: 'blue', overload: true, schedule: null
+    rest: 120, sound: true, haptics: true, bar: 20, accent: 'blue', overload: true, schedule: null,
+    cycle: { on: false, train: 200, rest: 200 }, fast: { on: false, hours: 16 }
   });
 }
 

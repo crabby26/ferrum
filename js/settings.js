@@ -59,6 +59,24 @@ const Settings = {
         </div>
       </div>
 
+      <div class="section-title">Ernährung</div>
+      <div class="card">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="flex:1"><b>Trainingstage: mehr Kalorien</b><div class="hint" style="margin:2px 0 0">An Trainingstagen mehr, an Ruhetagen weniger essen (über die Kohlenhydrate). Trainingstage kommen aus deinem Wochenplan oder einem gespeicherten Workout.</div></div>
+          <label class="switch"><input type="checkbox" data-set="cycle-on" ${st.cycle && st.cycle.on ? 'checked' : ''}><i></i></label>
+        </div>
+        ${st.cycle && st.cycle.on ? `<div class="grid2" style="margin-top:12px">
+          ${num('cycle-train', st.cycle.train, 'Trainingstag +', 'kcal')}
+          ${num('cycle-rest', st.cycle.rest, 'Ruhetag −', 'kcal')}
+        </div>` : ''}
+        <div style="display:flex;align-items:center;gap:12px;margin-top:16px">
+          <div style="flex:1"><b>Intervallfasten</b><div class="hint" style="margin:2px 0 0">Fasten-Timer auf „Heute“ und unter Ernährung. Endet automatisch, sobald du etwas einträgst.</div></div>
+          <label class="switch"><input type="checkbox" data-set="fast-on" ${st.fast && st.fast.on ? 'checked' : ''}><i></i></label>
+        </div>
+        ${st.fast && st.fast.on ? `<label class="field" style="margin:12px 0 0"><span>Fastenziel</span>
+          <select class="input" data-set="fast-hours">${[12, 14, 16, 18, 20].map(h => `<option value="${h}" ${(+st.fast.hours || 16) === h ? 'selected' : ''}>${h}:${24 - h} (${h} Stunden fasten)</option>`).join('')}</select></label>` : ''}
+      </div>
+
       <div class="section-title">Ziel-Rechner</div>
       <div class="card">
         <div class="grid3">
@@ -207,6 +225,23 @@ const Settings = {
   saveField(el) {
     const k = el.dataset.set;
     const st = S.settings;
+    if (/^(cycle|fast)-/.test(k)) {
+      // Kalorien je Trainings-/Ruhetag und Intervallfasten
+      st.cycle = Object.assign({ on: false, train: 200, rest: 200 }, st.cycle || {});
+      st.fast = Object.assign({ on: false, hours: 16 }, st.fast || {});
+      if (k === 'cycle-on') st.cycle.on = el.checked;
+      if (k === 'fast-on') st.fast.on = el.checked;
+      if (k === 'fast-hours') st.fast.hours = +el.value;
+      if (k === 'cycle-train' || k === 'cycle-rest') {
+        const x = U.parseNum(el.value);
+        if (isNaN(x) || x < 0 || x > 1500) { U.toast('Bitte einen Wert zwischen 0 und 1500 eingeben', 'err'); return; }
+        st.cycle[k === 'cycle-train' ? 'train' : 'rest'] = Math.round(x);
+      }
+      Store.saveKV('settings');
+      if (k === 'cycle-on' || k === 'fast-on') Settings.render();
+      App.updateBackupDot();
+      return;
+    }
     if (k === 'sound' || k === 'haptics' || k === 'overload') { st[k] = el.checked; if (k === 'haptics' && el.checked) U.haptic(); }
     else if (k === 'activity' || k === 'rest') st[k] = +el.value;
     else {

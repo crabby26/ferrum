@@ -6,7 +6,7 @@
    Nur dann merkt das iPhone, dass es neue Dateien gibt.
    Deine Daten (IndexedDB) sind davon NICHT betroffen.
    ========================================================= */
-const VERSION = '5.0.0';
+const VERSION = '6.0.0';
 const CACHE = 'ferrum-' + VERSION;
 
 const ASSETS = [
@@ -20,6 +20,7 @@ const ASSETS = [
   './js/charts.js',
   './js/scanner.js',
   './js/nutrition.js',
+  './js/foodpro.js',
   './js/training.js',
   './js/import.js',
   './js/progress.js',
@@ -180,9 +181,14 @@ async function buildMessage(type) {
   }
 
   // type === 'day'
-  const goal = `Ziel: ${fmt(st.kcal || 0)} kcal, ${fmt(st.protein || 0)} g Protein`;
-  if ((data.workouts || []).some(w => w.date === today)) return { title: 'Heute schon trainiert ✅', body: goal + '.', go: 'today' };
   const p = planFor(data, today);
+  const trained = (data.workouts || []).some(w => w.date === today);
+  // Tagesziel: an Trainingstagen mehr, an Ruhetagen weniger (wie in der App)
+  let kcal = +st.kcal || 0;
+  const planned = !!(st.schedule && st.schedule.on && p.tpl);
+  if (st.cycle && st.cycle.on) kcal += (trained || planned) ? (+st.cycle.train || 0) : -(+st.cycle.rest || 0);
+  const goal = `Ziel: ${fmt(kcal)} kcal, ${fmt(st.protein || 0)} g Protein`;
+  if (trained) return { title: 'Heute schon trainiert ✅', body: goal + '.', go: 'today' };
   if (p.none) return { title: 'Guten Morgen 💪', body: goal + '.', go: 'today' };
   if (p.rest) {
     const nxt = p.next ? (p.inDays === 1 ? `Morgen: ${p.next.name}` : `${WD[weekday(p.nextKey)]}: ${p.next.name}`) : '';

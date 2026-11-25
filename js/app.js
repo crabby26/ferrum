@@ -74,7 +74,7 @@ const App = {
   renderToday() {
     const el = $('#view-today');
     const day = U.today();
-    const st = S.settings;
+    const st = FoodPro.goalsFor(day); // Tagesziel (ggf. Trainings-/Ruhetag)
     const t = Nutri.totals(day);
     const streak = Nutri.streak();
     const rest = st.kcal - t.kcal;
@@ -83,7 +83,8 @@ const App = {
     const big = U.ring(212, 20, t.kcal / st.kcal, over ? 'var(--over)' : 'var(--accent)', `
       <div class="v" data-count="${Math.round(Math.abs(rest))}">${U.n(Math.abs(rest))}</div>
       <div class="l">${rest >= 0 ? 'kcal übrig' : 'kcal über Ziel'}</div>
-      <div class="s">${U.n(t.kcal)} von ${U.n(st.kcal)}</div>`);
+      <div class="s">${U.n(t.kcal)} von ${U.n(st.kcal)}</div>
+      ${st.type ? `<div class="s" style="margin-top:4px;color:var(--accent)">${st.type === 'train' ? 'Trainingstag' : 'Ruhetag'}</div>` : ''}`);
     const mr = (v, goal, color, name) => `<div class="macro-ring">
       ${U.ring(92, 9, v / goal, color, `<div class="v" data-count="${Math.round(v)}">${U.n(v)}</div><div class="l">g</div>`)}
       <div class="name">${name}</div><div class="goal">Ziel ${goal} g</div></div>`;
@@ -148,6 +149,7 @@ const App = {
       </div>
       <button class="btn primary block" data-act="quick-add" style="margin:18px 0 12px">${U.icon.plus} Essen eintragen</button>
       ${Nutri.quickRow(day)}
+      ${FoodPro.fastCard()}
       ${train}
       ${Nutri.waterCard(day)}
       ${streak.n && !streak.today ? `<p class="hint" style="text-align:center">Trag heute etwas ein, damit deine Serie von ${streak.n} ${streak.n === 1 ? 'Tag' : 'Tagen'} weiterläuft.</p>` : ''}
@@ -236,6 +238,7 @@ const App = {
       'hide-install': () => { S.meta.hideInstall = true; Store.saveKV('meta'); App.refresh(); }
     });
     Train.bind();
+    FoodPro.bind();
     Progress.bind();
     Settings.bind();
 

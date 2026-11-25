@@ -161,6 +161,49 @@ const BASIC_FOODS = BASIC_RAW.map(r => ({
   liquid: r[6] === 'Getränke' || /^Milch /.test(r[0]) || undefined
 }));
 
+/* Ballaststoffe und Zucker je 100 g (Durchschnittswerte) für die Basics.
+   [Ballaststoffe, Zucker, gesättigte Fettsäuren, Salz] – fehlende Werte = null */
+const BASIC_MICRO = {
+  'Haferflocken': [10, 1.1, 1.3, 0], 'Reis (roh)': [1.4, 0.1, 0.2, 0], 'Reis (gekocht)': [0.4, 0.1, 0.1, 0],
+  'Basmatireis (roh)': [1.2, 0.2, 0.2, 0], 'Nudeln (roh)': [3, 3, 0.3, 0], 'Nudeln (gekocht)': [1.8, 0.6, 0.2, 0],
+  'Vollkornnudeln (roh)': [8, 3, 0.4, 0], 'Kartoffeln (gekocht)': [1.8, 0.8, 0, 0], 'Süßkartoffel': [3, 4.2, 0, 0.1],
+  'Couscous (roh)': [5, 2, 0.3, 0], 'Bulgur (roh)': [12, 0.4, 0.2, 0], 'Quinoa (roh)': [7, 0, 0.7, 0],
+  'Gnocchi': [1.5, 0.5, 0.1, 1], 'Vollkornbrot': [7.5, 3, 0.3, 1.1], 'Toastbrot': [3, 5, 0.8, 1.2],
+  'Brötchen (Weizen)': [3, 2, 0.3, 1.2], 'Vollkornbrötchen': [6, 2.5, 0.5, 1.1], 'Knäckebrot': [15, 2, 0.3, 1.1],
+  'Reiswaffeln': [3, 0.5, 0.6, 0], 'Wrap (Weizen-Tortilla)': [3, 3, 3, 1.2], 'Cornflakes': [3, 8, 0.2, 1.1],
+  'Müsli (ohne Zuckerzusatz)': [8, 12, 1.5, 0], 'Granola': [6, 20, 4, 0.2],
+  'Hähnchenbrust (roh)': [0, 0, 0.3, 0.2], 'Hähnchenbrust (gebraten)': [0, 0, 1, 0.3], 'Putenbrust (roh)': [0, 0, 0.3, 0.2],
+  'Rinderhack (roh, 20 % Fett)': [0, 0, 8, 0.2], 'Rinderhack mager (5 % Fett)': [0, 0, 2, 0.2], 'Hackfleisch gemischt (roh)': [0, 0, 8, 0.2],
+  'Rindersteak (Hüfte, roh)': [0, 0, 1.4, 0.2], 'Schweinefilet (roh)': [0, 0, 0.9, 0.2], 'Lachs (roh)': [0, 0, 2.5, 0.1],
+  'Thunfisch (Dose, in Wasser)': [0, 0, 0.3, 0.9], 'Seelachs / Kabeljau (roh)': [0, 0, 0.1, 0.2], 'Garnelen (gegart)': [0, 0, 0.2, 0.6],
+  'Kochschinken': [0, 1, 1.2, 2.2], 'Putenbrust-Aufschnitt': [0, 1, 0.4, 2], 'Salami': [0, 0.5, 12, 4.5], 'Bratwurst': [0, 0.5, 10, 1.8],
+  'Ei (Größe M)': [0, 0.7, 2.8, 0.3], 'Eiklar': [0, 0.7, 0, 0.4], 'Magerquark': [0, 4, 0.2, 0.1], 'Speisequark 20 %': [0, 3.5, 3, 0.1],
+  'Skyr natur': [0, 4, 0.1, 0.1], 'Griechischer Joghurt 10 %': [0, 4, 6.5, 0.1], 'Naturjoghurt 1,5 %': [0, 4.7, 1, 0.1],
+  'Naturjoghurt 3,5 %': [0, 4.5, 2.3, 0.1], 'Milch 1,5 %': [0, 4.8, 1, 0.1], 'Milch 3,5 %': [0, 4.8, 2.3, 0.1],
+  'Körniger Frischkäse': [0, 2, 2.8, 0.9], 'Frischkäse natur': [0, 4, 14, 0.8], 'Gouda': [0, 0, 19, 2], 'Mozzarella': [0, 1, 13, 0.5],
+  'Mozzarella light': [0, 1, 6, 0.5], 'Feta': [0, 0.5, 14, 2.7], 'Parmesan': [0, 0, 19, 1.6], 'Butter': [0, 0.6, 52, 0],
+  'Proteinpudding': [0.5, 5, 1, 0.2], 'Whey Protein (Pulver)': [0, 5, 3, 0.4], 'Casein (Pulver)': [0, 3, 1, 0.5],
+  'Proteinriegel': [10, 3, 4, 0.5], 'Tofu natur': [2, 0.5, 1.2, 0],
+  'Banane': [1.8, 17, 0.1, 0], 'Apfel': [2.3, 10, 0, 0], 'Orange': [2.2, 9, 0, 0], 'Kiwi': [2.5, 9, 0, 0], 'Blaubeeren': [3, 7, 0, 0],
+  'Erdbeeren': [2, 5, 0, 0], 'Himbeeren': [6.5, 4.5, 0, 0], 'Weintrauben': [1.5, 16, 0.1, 0], 'Ananas': [1.2, 10, 0, 0],
+  'Mango': [1.8, 13, 0.1, 0], 'Avocado': [6.7, 0.7, 2.1, 0], 'Datteln (getrocknet)': [7, 63, 0, 0], 'Rosinen': [4, 59, 0.1, 0.1],
+  'Brokkoli': [3, 1.7, 0, 0.1], 'Spinat': [2.2, 0.4, 0.1, 0.2], 'Tomate': [1.2, 2.6, 0, 0], 'Gurke': [0.5, 1.7, 0, 0],
+  'Paprika (rot)': [2, 4.5, 0, 0], 'Karotte': [2.8, 4.7, 0, 0.1], 'Zucchini': [1, 2, 0.1, 0], 'Champignons': [1, 0.4, 0.1, 0],
+  'Zwiebel': [1.8, 4.5, 0, 0], 'Eisbergsalat': [1.2, 1.8, 0, 0], 'Erbsen (TK)': [5, 4, 0.1, 0], 'Mais (Dose)': [3, 4, 0.2, 0.5],
+  'Kidneybohnen (Dose, abgetropft)': [6.5, 0.3, 0.1, 0.5], 'Kichererbsen (Dose, abgetropft)': [5, 0.5, 0.3, 0.5],
+  'Rote Linsen (roh)': [11, 2, 0.2, 0], 'Hummus': [6, 0.5, 2.5, 1.2],
+  'Mandeln': [12.5, 4.4, 4, 0], 'Walnüsse': [6.5, 2.6, 6, 0], 'Erdnüsse (geröstet)': [8, 4, 7, 0.5], 'Erdnussbutter': [6, 4, 9, 0.5],
+  'Chiasamen': [34, 0, 3.3, 0], 'Leinsamen': [27, 1.5, 3.7, 0], 'Olivenöl': [0, 0, 14, 0], 'Rapsöl': [0, 0, 7, 0], 'Mayonnaise': [0, 1.5, 6, 1.5],
+  'Zartbitterschokolade 70 %': [11, 24, 25, 0], 'Vollmilchschokolade': [2, 55, 18, 0.2], 'Honig': [0, 76, 0, 0],
+  'Marmelade': [1, 58, 0, 0], 'Zucker': [0, 100, 0, 0], 'Ketchup': [0.5, 22, 0, 1.8], 'Pizza Margherita (TK)': [2, 3.5, 4, 1.2],
+  'Pommes frites (zubereitet)': [3.5, 0.5, 1.5, 0.6],
+  'Wasser': [0, 0, 0, 0], 'Fanta Orange': [0, 7.6, 0, 0], 'Fanta Zero': [0, 0, 0, 0], 'Sprite': [0, 4.6, 0, 0],
+  'Apfelschorle': [0, 5.5, 0, 0], 'Apfelsaft': [0.2, 10, 0, 0], 'Eistee Pfirsich': [0, 4.5, 0, 0], 'Energy Drink': [0, 11, 0, 0.1],
+  'Energy Drink zuckerfrei': [0, 0, 0, 0.1], 'Kaffee schwarz': [0, 0, 0, 0], 'Tee ungesüßt': [0, 0, 0, 0],
+  'Cola': [0, 10.6, 0, 0], 'Cola Zero': [0, 0, 0, 0], 'Orangensaft': [0.2, 9, 0, 0], 'Hafermilch': [0.8, 4, 0.2, 0.1],
+  'Sojadrink ungesüßt': [0.5, 0.2, 0.3, 0.1], 'Bier (Pils)': [0, 0.3, 0, 0], 'Kaffee mit Milch': [0, 1.4, 0.4, 0]
+};
+
 /* ---------- Übungen ---------- */
 const EX_RAW = [
   ['Bankdrücken (Langhantel)', 'Brust'],
