@@ -1235,3 +1235,130 @@ html.reflow #app { height: calc(100vh + 1px); }
 /* App-Modus: Tab-Leiste passt sich der Anzahl der Tabs an */
 .tabbar { display: flex; }
 .tabbar .tab { flex: 1 1 0; min-width: 0; }
+
+/* =========================================================
+   Premium Liquid Glass (Ferrum 6.2)
+   Echtes Glas: Unschärfe + Sättigung, schimmernde Lichtkante
+   (Verlaufsrahmen), weiches Innenlicht und ein tiefer Farb-
+   hintergrund, durch den das Glas sichtbar wird.
+   ========================================================= */
+:root {
+  --lg-fill: linear-gradient(160deg, rgba(255, 255, 255, .11) 0%, rgba(255, 255, 255, .045) 48%, rgba(255, 255, 255, .07) 100%);
+  --lg-blur: blur(26px) saturate(170%);
+  --lg-rim: linear-gradient(140deg, rgba(255, 255, 255, .42), rgba(255, 255, 255, .06) 32%, rgba(255, 255, 255, .02) 62%, rgba(255, 255, 255, .22));
+  --lg-shadow: 0 14px 40px -20px rgba(0, 0, 0, .8);
+  --lg-inner: inset 0 1px 0 rgba(255, 255, 255, .16);
+  --accent-glow: color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+/* Tiefer Farbhintergrund (folgt der Akzentfarbe) */
+body::before {
+  display: block;
+  background:
+    radial-gradient(75% 45% at 0% 0%, var(--accent-soft), transparent 70%),
+    radial-gradient(75% 45% at 0% 0%, var(--accent-glow), transparent 70%),
+    radial-gradient(60% 40% at 100% 22%, rgba(191, 90, 242, .14), transparent 70%),
+    radial-gradient(70% 45% at 40% 108%, rgba(100, 210, 255, .11), transparent 70%),
+    #000;
+}
+.workout-screen { background: transparent; }
+.workout-screen::before {
+  display: block; content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background: radial-gradient(70% 45% at 100% 0%, var(--accent-glow), transparent 70%), radial-gradient(60% 40% at 0% 100%, rgba(191, 90, 242, .12), transparent 70%), #000;
+}
+
+/* Glasflächen mit Lichtkante */
+.card, .list, .meal, .sum-card, .next-card, .ex-card, .inline-banner, .tile {
+  position: relative;
+  background: var(--lg-fill);
+  -webkit-backdrop-filter: var(--lg-blur); backdrop-filter: var(--lg-blur);
+  border: 0;
+  box-shadow: var(--lg-inner), var(--lg-shadow);
+  border-radius: 24px;
+}
+.card::before, .list::before, .meal::before, .sum-card::before, .next-card::before, .ex-card::before, .inline-banner::before, .tile::before,
+.tabbar::before, .sheet::before, .quick-chip::before, .btn.primary::before {
+  content: ""; display: block; position: absolute; inset: 0; border-radius: inherit; padding: 1px; pointer-events: none;
+  background: var(--lg-rim);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor; mask-composite: exclude;
+  opacity: .9; z-index: 1; border: 0; width: auto; height: auto; right: 0; top: 0;
+}
+.next-card::before { opacity: .9; }
+.card, .list, .meal, .sum-card, .next-card, .ex-card { margin-bottom: 14px; }
+.list { overflow: hidden; }
+.list-item + .list-item::before, .meal .list-item::before { background: rgba(255, 255, 255, .08); z-index: 0; }
+.sheet-body .card, .sheet-body .list { background: rgba(255, 255, 255, .06); box-shadow: var(--lg-inner); -webkit-backdrop-filter: none; backdrop-filter: none; }
+.food-macros > div, .stat, .kpi { background: rgba(255, 255, 255, .06); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08); border: 0; border-radius: 16px; }
+
+/* Glas-Knöpfe */
+.btn, .icon-btn, .chip, .seg, .quick-chip, .day-label, .streak, .input, select.input, .set-in, .set-check, .amount-field {
+  background: rgba(255, 255, 255, .09);
+  -webkit-backdrop-filter: blur(20px) saturate(170%); backdrop-filter: blur(20px) saturate(170%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .2), inset 0 0 0 .5px rgba(255, 255, 255, .1);
+  border: 0;
+}
+.quick-chip { position: relative; }
+.icon-btn.plain { background: transparent; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+.input:focus, .set-in:focus, .amount-field:focus-within { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .2), 0 0 0 1.5px var(--accent); }
+
+/* Hervorgehobene Glas-Knöpfe in der Akzentfarbe */
+.btn.primary, .chip.on, .sheet-body .chip.on, .icon-btn.accent, .workout-pill, .toast.ok {
+  position: relative;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 78%, #fff 22%) 0%, var(--accent) 55%, color-mix(in srgb, var(--accent) 88%, #000 12%) 100%);
+  color: var(--ink);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .5), inset 0 -1px 0 rgba(0, 0, 0, .15), 0 10px 26px -12px var(--accent);
+}
+.btn.primary::before { opacity: .55; }
+.meal-head .icon-btn.accent { background: var(--accent-soft); color: var(--accent); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .18), inset 0 0 0 .5px rgba(255, 255, 255, .1); }
+.btn.danger { background: rgba(255, 69, 58, .14); color: var(--danger); }
+.set-row.done .set-check { background: linear-gradient(180deg, #4BE07A, var(--ok)); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .45); }
+.seg button.on, .sheet-body .seg button.on { background: rgba(255, 255, 255, .22); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .3), 0 3px 10px rgba(0, 0, 0, .25); }
+
+/* Tab-Leiste: schwebendes Glas mit Lichtkante */
+.tabbar {
+  background: rgba(30, 30, 34, .5);
+  -webkit-backdrop-filter: blur(30px) saturate(190%); backdrop-filter: blur(30px) saturate(190%);
+  border: 0;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .14), 0 18px 44px rgba(0, 0, 0, .6);
+}
+.tab.active { background: rgba(255, 255, 255, .14); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .22); }
+
+/* Sheets, Meldungen, Leisten: Glas */
+.sheet {
+  background: rgba(28, 28, 32, .66);
+  -webkit-backdrop-filter: blur(40px) saturate(180%); backdrop-filter: blur(40px) saturate(180%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .14);
+  border: 0;
+}
+.sheet::before { z-index: 0; }
+.sheet > * { position: relative; z-index: 1; }
+.ws-head, .rest-bar, .toast, .banner {
+  background: rgba(30, 30, 34, .55);
+  -webkit-backdrop-filter: blur(30px) saturate(190%); backdrop-filter: blur(30px) saturate(190%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .14), 0 10px 30px rgba(0, 0, 0, .45);
+}
+.backdrop { background: rgba(0, 0, 0, .4); }
+
+/* Klarere Hierarchie */
+.page-head { margin: 6px 0 22px; }
+.section-title { font-size: 21px; font-weight: 700; letter-spacing: -.022em; margin: 30px 4px 12px; }
+.card-title { font-size: 17px; font-weight: 650; letter-spacing: -.015em; }
+.hero-rings > .ring-wrap .ring-center .v { font-weight: 700; }
+
+/* Einstellungen im iOS-Stil */
+.profile-card { display: flex; align-items: center; gap: 14px; }
+.profile-card img { width: 58px; height: 58px; border-radius: 15px; box-shadow: 0 6px 18px rgba(0, 0, 0, .45); }
+.profile-name { font-size: 22px; font-weight: 700; letter-spacing: -.02em; }
+.settings-list { margin-bottom: 16px; }
+.settings-list .list-item { min-height: 58px; gap: 14px; }
+.settings-list .list-item + .list-item::before { left: 60px; }
+.set-icon { width: 32px; height: 32px; border-radius: 9px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .35); }
+.set-icon svg { width: 19px; height: 19px; fill: none; stroke: #fff; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.set-row { display: flex; align-items: center; gap: 12px; padding: 4px 0; }
+.set-row + .set-row { margin-top: 14px; padding-top: 14px; border-top: .5px solid rgba(255, 255, 255, .08); }
+.set-row b { font-weight: 600; }
+
+/* „Was fehlt noch?“ kompakt */
+.sug-row-compact .quick-title b { color: var(--text); font-weight: 600; }
+.sug-chip .qc-plus { background: var(--accent-soft); }

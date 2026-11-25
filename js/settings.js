@@ -31,38 +31,127 @@ const ACCENTS = [
 ];
 
 const Settings = {
+  /* ---------- Übersicht wie in den iOS-Einstellungen ----------
+     Die Hauptseite zeigt nur eine kurze Liste. Jeder Bereich öffnet
+     sich als eigenes Fenster (Sheet). */
+  openKey: null,
+  openSheet: null,
+
+  ICONS: {
+    mode: '<svg viewBox="0 0 24 24"><path d="M12 3l8 4.5-8 4.5-8-4.5z"/><path d="M4 12l8 4.5 8-4.5M4 16.5L12 21l8-4.5"/></svg>',
+    look: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><circle cx="8.5" cy="10" r="1.3"/><circle cx="12" cy="7.5" r="1.3"/><circle cx="15.5" cy="10" r="1.3"/><path d="M12 20.5c-1.5 0-2-1.2-1.6-2.3.5-1.3-.4-2.2-1.7-2.2H6"/></svg>',
+    goals: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1"/></svg>',
+    food: '<svg viewBox="0 0 24 24"><path d="M7 3v8M4.5 3v5a2.5 2.5 0 0 0 5 0V3M7 11v10"/><path d="M17 21V3c-2.2 1.2-3.5 4-3.5 7.5 0 2 1.2 3 3.5 3"/></svg>',
+    calc: '<svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="3"/><path d="M8.5 7h7M8.5 11h1M12 11h1M15.5 11h0M8.5 14.5h1M12 14.5h1M8.5 18h1M12 18h1M15.5 14.5V18"/></svg>',
+    train: '<svg viewBox="0 0 24 24"><path d="M6.5 7v10M3.5 9.5v5M17.5 7v10M20.5 9.5v5M6.5 12h11"/></svg>',
+    push: '<svg viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></svg>',
+    data: '<svg viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="7" ry="2.8"/><path d="M5 6v6c0 1.5 3.1 2.8 7 2.8s7-1.3 7-2.8V6M5 12v6c0 1.5 3.1 2.8 7 2.8s7-1.3 7-2.8v-6"/></svg>',
+    about: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5M12 7.6v.4"/></svg>'
+  },
+
+  sections() {
+    const st = S.settings;
+    const food = App.hasFood(), training = App.hasTrain();
+    const lb = S.meta.lastBackup;
+    const accent = ACCENTS.find(a => a[0] === (document.documentElement.dataset.accent || 'blue')) || ACCENTS[0];
+    const foodSub = [st.fast && st.fast.on ? `Fasten ${st.fast.hours || 16}:${24 - (st.fast.hours || 16)}` : '', training && st.cycle && st.cycle.on ? `Trainingstage +${st.cycle.train} kcal` : ''].filter(Boolean).join(', ') || 'Fasten, Trainingstage';
+    return [
+      { key: 'mode', title: 'Was du trackst', color: '#5E5CE6', sub: (MODES.find(m => m[0] === App.mode()) || MODES[0])[1], show: true, group: 1 },
+      { key: 'look', title: 'Darstellung', color: accent[2], sub: accent[1] + (st.haptics !== false ? ', Haptik an' : ''), show: true, group: 1 },
+      { key: 'goals', title: 'Tagesziele', color: '#FF375F', sub: `${U.n(st.kcal)} kcal, ${st.protein} g Protein`, show: food, group: 2 },
+      { key: 'food', title: 'Ernährung', color: '#30D158', sub: foodSub, show: food, group: 2 },
+      { key: 'calc', title: 'Ziel-Rechner', color: '#FF9F0A', sub: `${st.height} cm, ${U.n(st.weight, 1)} kg, ${(GOALS.find(g => g[0] === st.goal) || GOALS[0])[1]}`, show: food, group: 2 },
+      { key: 'train', title: 'Training', color: '#0A84FF', sub: `Pause ${U.fmtDur((st.rest || 120) * 1000)} min${st.overload !== false ? ', Vorschläge an' : ''}`, show: training, group: 3 },
+      { key: 'push', title: 'Mitteilungen', color: '#FF453A', sub: '7:00, 8:00 und sonntags 18:00', show: true, group: 3 },
+      { key: 'data', title: 'Daten & Backup', color: '#64D2FF', sub: lb ? 'Letztes Backup ' + U.fmtDay(U.key(new Date(lb))) : 'Noch kein Backup', show: true, group: 4, warn: App.needsBackup() },
+      { key: 'about', title: 'Über Ferrum', color: '#8E8E93', sub: 'Version, Updates', show: true, group: 4 }
+    ].filter(s => s.show);
+  },
+
   render() {
+    Settings.renderMain();
+    Settings.refreshOpen();
+  },
+  // Nur die Übersicht neu zeichnen (ein geöffneter Bereich bleibt unberührt)
+  renderMain() {
     const el = $('#view-settings');
+    const secs = Settings.sections();
+    const groups = [...new Set(secs.map(s => s.group))];
+    const days = new Set(S.entries.map(e => e.date)).size;
+    el.innerHTML = `
+      <div class="page-head"><h1 class="page-title">Einstellungen</h1></div>
+      <div class="card profile-card">
+        <img src="icons/icon-180.png" alt="">
+        <div style="flex:1;min-width:0">
+          <div class="profile-name">Ferrum</div>
+          <div class="card-sub">${App.hasFood() ? `${days} ${days === 1 ? 'Tag' : 'Tage'} getrackt` : ''}${App.hasFood() && App.hasTrain() ? ', ' : ''}${App.hasTrain() ? `${S.workouts.length} Workouts` : ''}</div>
+          <div class="hint" style="margin:2px 0 0">Alle Daten bleiben auf diesem iPhone.</div>
+        </div>
+      </div>
+      ${App.needsBackup() ? `<div class="inline-banner"><div class="txt"><b>Zeit für ein Backup</b>${S.meta.lastBackup ? 'Dein letztes Backup ist älter als 7 Tage.' : 'Du hast noch nie ein Backup gemacht.'}</div><button class="btn small primary" data-act="backup">Sichern</button></div>` : ''}
+      ${groups.map(g => `<div class="list settings-list">${secs.filter(s => s.group === g).map(s => `
+        <button class="list-item" data-act="set-open" data-k="${s.key}">
+          <span class="set-icon" style="background:${s.color}">${Settings.ICONS[s.key]}</span>
+          <div class="li-main"><div class="li-title">${s.title}</div><div class="li-sub">${U.esc(s.sub)}</div></div>
+          ${s.warn ? '<i class="tab-dot" style="position:static"></i>' : ''}${U.icon.chevron}
+        </button>`).join('')}</div>`).join('')}
+      <p class="hint" style="text-align:center;margin:18px 0 0">Ohne Konto, ohne Werbung, ohne Tracking.<br>Lebensmitteldaten online: Open Food Facts (ODbL)</p>
+    `;
+  },
+
+  open(key) {
+    const sec = Settings.sections().find(s => s.key === key) || { title: 'Einstellungen' };
+    const sh = U.sheet({
+      title: sec.title,
+      full: key !== 'mode' && key !== 'look',
+      body: Settings.sectionHTML(key),
+      onClose: () => { if (Settings.openSheet === sh) { Settings.openSheet = null; Settings.openKey = null; } }
+    });
+    Settings.openKey = key;
+    Settings.openSheet = sh;
+    sh.body.addEventListener('change', Settings.onChange);
+    Settings.after(key);
+  },
+  refreshOpen() {
+    const sh = Settings.openSheet;
+    if (!sh || sh.closed || !Settings.openKey) return;
+    const top = sh.body.scrollTop;
+    sh.body.innerHTML = Settings.sectionHTML(Settings.openKey);
+    sh.body.scrollTop = top;
+    Settings.after(Settings.openKey);
+  },
+  after(key) {
+    if (key === 'calc') Settings.drawCalc();
+    if (key === 'push') Settings.drawPush();
+    if (key === 'about') Settings.appInfo();
+  },
+
+  sectionHTML(key) {
     const st = S.settings;
     const lb = S.meta.lastBackup;
-    const food = App.hasFood(), training = App.hasTrain();
+    const training = App.hasTrain();
     const macroKcal = st.protein * 4 + st.carbs * 4 + st.fat * 9;
     const num = (id, val, label, unit, dec = 0) => `<label class="field"><span>${label}${unit ? ' (' + unit + ')' : ''}</span>
       <input class="input num" data-set="${id}" inputmode="${dec ? 'decimal' : 'numeric'}" value="${U.n(val, dec).replace(/\./g, '')}"></label>`;
+    const toggle = (id, on, title, hint) => `<div class="set-row">
+      <div style="flex:1"><b>${title}</b>${hint ? `<div class="hint" style="margin:2px 0 0">${hint}</div>` : ''}</div>
+      <label class="switch"><input type="checkbox" data-set="${id}" ${on ? 'checked' : ''}><i></i></label></div>`;
 
-    el.innerHTML = `
-      <div class="page-head"><h1 class="page-title">Einstellungen</h1></div>
-      ${App.needsBackup() ? `<div class="inline-banner"><div class="txt"><b>Zeit für ein Backup</b>${lb ? 'Dein letztes Backup ist älter als 7 Tage.' : 'Du hast noch nie ein Backup gemacht.'}</div><button class="btn small primary" data-act="backup">Sichern</button></div>` : ''}
+    if (key === 'mode') return `
+      <div class="seg" style="margin:0">${MODES.map(m => `<button data-act="set-mode" data-v="${m[0]}" class="${App.mode() === m[0] ? 'on' : ''}">${m[1]}</button>`).join('')}</div>
+      <p class="hint" style="margin:12px 2px 0">${(MODES.find(m => m[0] === App.mode()) || MODES[0])[2]}</p>`;
 
-      <div class="section-title" style="margin-top:0">Was möchtest du tracken?</div>
+    if (key === 'look') return `
       <div class="card">
-        <div class="seg" style="margin:0">${MODES.map(m => `<button data-act="set-mode" data-v="${m[0]}" class="${App.mode() === m[0] ? 'on' : ''}">${m[1]}</button>`).join('')}</div>
-        <p class="hint" style="margin:10px 2px 0">${(MODES.find(m => m[0] === App.mode()) || MODES[0])[2]}</p>
-      </div>
-
-      <div class="section-title">Darstellung</div>
-      <div class="card">
+        <div class="card-title" style="margin-bottom:12px">Akzentfarbe</div>
         <div class="accent-dots">
           ${ACCENTS.map(a => `<button class="accent-dot ${(document.documentElement.dataset.accent || 'blue') === a[0] ? 'on' : ''}" data-act="set-accent" data-v="${a[0]}" style="background:${a[2]}" aria-label="${a[1]}"></button>`).join('')}
         </div>
         <p class="hint" id="accent-name" style="margin-top:12px">${(ACCENTS.find(a => a[0] === (document.documentElement.dataset.accent || 'blue')) || ACCENTS[0])[1]}</p>
-        <div style="display:flex;align-items:center;gap:12px;margin-top:14px">
-          <div style="flex:1"><b>Haptisches Feedback</b><div class="hint" style="margin:2px 0 0">Kurzes Klopfen beim Abhaken und Eintragen (ab iOS 18).</div></div>
-          <label class="switch"><input type="checkbox" data-set="haptics" ${st.haptics !== false ? 'checked' : ''}><i></i></label>
-        </div>
       </div>
+      <div class="card">${toggle('haptics', st.haptics !== false, 'Haptisches Feedback', 'Kurzes Klopfen beim Abhaken und Eintragen (ab iOS 18).')}</div>`;
 
-      ${food ? `<div class="section-title">Tagesziele</div>
+    if (key === 'goals') return `
       <div class="card">
         <div class="grid2">
           ${num('kcal', st.kcal, 'Kalorien', 'kcal')}
@@ -71,31 +160,30 @@ const Settings = {
           ${num('fat', st.fat, 'Fett', 'g')}
         </div>
         <p class="hint" id="macro-hint">Deine Makros ergeben ${U.n(macroKcal)} kcal${Math.abs(macroKcal - st.kcal) > 50 ? ' – das weicht von deinem Kalorienziel ab.' : '.'}</p>
-        <div class="grid2" style="margin-top:12px">
+      </div>
+      <div class="card">
+        <div class="grid2">
           ${num('waterGoal', st.waterGoal, 'Wasserziel', 'ml')}
           ${num('glass', st.glass, 'Glasgröße', 'ml')}
         </div>
       </div>
+      <p class="hint" style="margin:0 2px">Einen Vorschlag berechnet der Ziel-Rechner.</p>`;
 
-      <div class="section-title">Ernährung</div>
-      <div class="card">
-        ${training ? `<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
-          <div style="flex:1"><b>Trainingstage: mehr Kalorien</b><div class="hint" style="margin:2px 0 0">An Trainingstagen mehr, an Ruhetagen weniger essen (über die Kohlenhydrate). Trainingstage kommen aus deinem Wochenplan oder einem gespeicherten Workout.</div></div>
-          <label class="switch"><input type="checkbox" data-set="cycle-on" ${st.cycle && st.cycle.on ? 'checked' : ''}><i></i></label>
-        </div>
+    if (key === 'food') return `
+      ${training ? `<div class="card">
+        ${toggle('cycle-on', st.cycle && st.cycle.on, 'Trainingstage: mehr Kalorien', 'An Trainingstagen mehr, an Ruhetagen weniger essen (über die Kohlenhydrate). Trainingstage kommen aus deinem Wochenplan oder einem gespeicherten Workout.')}
         ${st.cycle && st.cycle.on ? `<div class="grid2" style="margin-top:12px">
           ${num('cycle-train', st.cycle.train, 'Trainingstag +', 'kcal')}
           ${num('cycle-rest', st.cycle.rest, 'Ruhetag −', 'kcal')}
-        </div>` : ''}` : ''}
-        <div style="display:flex;align-items:center;gap:12px">
-          <div style="flex:1"><b>Intervallfasten</b><div class="hint" style="margin:2px 0 0">Fasten-Timer auf „Heute“ und unter Ernährung. Endet automatisch, sobald du etwas einträgst.</div></div>
-          <label class="switch"><input type="checkbox" data-set="fast-on" ${st.fast && st.fast.on ? 'checked' : ''}><i></i></label>
-        </div>
+        </div>` : ''}
+      </div>` : ''}
+      <div class="card">
+        ${toggle('fast-on', st.fast && st.fast.on, 'Intervallfasten', 'Fasten-Timer auf „Heute“ und unter Ernährung. Endet automatisch, sobald du etwas einträgst.')}
         ${st.fast && st.fast.on ? `<label class="field" style="margin:12px 0 0"><span>Fastenziel</span>
           <select class="input" data-set="fast-hours">${[12, 14, 16, 18, 20].map(h => `<option value="${h}" ${(+st.fast.hours || 16) === h ? 'selected' : ''}>${h}:${24 - h} (${h} Stunden fasten)</option>`).join('')}</select></label>` : ''}
-      </div>
+      </div>`;
 
-      <div class="section-title">Ziel-Rechner</div>
+    if (key === 'calc') return `
       <div class="card">
         <div class="grid3">
           ${num('height', st.height, 'Größe', 'cm')}
@@ -108,61 +196,53 @@ const Settings = {
         <label class="field"><span>Aktivität</span>
           <select class="input" data-set="activity">${ACTIVITY.map(a => `<option value="${a[0]}" ${+st.activity === a[0] ? 'selected' : ''}>${a[1]}</option>`).join('')}</select>
         </label>
-        <div class="field"><span>Ziel</span>
+        <div class="field" style="margin-bottom:0"><span>Ziel</span>
           <div class="seg" style="margin:0">${GOALS.map(g => `<button data-act="set-seg" data-k="goal" data-v="${g[0]}" class="${st.goal === g[0] ? 'on' : ''}">${g[1]}</button>`).join('')}</div>
         </div>
-        <div id="calc-out"></div>
-      </div>` : ''}
+      </div>
+      <div id="calc-out"></div>`;
 
-      ${training ? `<div class="section-title">Training</div>
+    if (key === 'train') return `
       <div class="card">
-        <label class="field"><span>Standard-Pause zwischen Sätzen</span>
+        <label class="field" style="margin-bottom:0"><span>Standard-Pause zwischen Sätzen</span>
           <select class="input" data-set="rest">${[45, 60, 90, 120, 150, 180, 240, 300].map(s => `<option value="${s}" ${+st.rest === s ? 'selected' : ''}>${U.fmtDur(s * 1000)} min</option>`).join('')}</select>
         </label>
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
-          <div style="flex:1"><b>Steigerungs-Vorschläge</b><div class="hint" style="margin:2px 0 0">Schlägt pro Übung Gewicht und Wiederholungen vor (progressive Überlastung): Oberes Ende des Wdh.-Bereichs geschafft → mehr Gewicht, sonst 1 Wdh. mehr.</div></div>
-          <label class="switch"><input type="checkbox" data-set="overload" ${st.overload !== false ? 'checked' : ''}><i></i></label>
-        </div>
-        <div style="display:flex;align-items:center;gap:12px">
-          <div style="flex:1"><b>Ton am Ende der Pause</b><div class="hint" style="margin:2px 0 0">Bei eingeschaltetem Stummschalter ist der Ton nicht zu hören.</div></div>
-          <label class="switch"><input type="checkbox" data-set="sound" ${st.sound !== false ? 'checked' : ''}><i></i></label>
-        </div>
-      </div>` : ''}
-
-      <div class="section-title">Mitteilungen</div>
-      <div class="card" id="push-card"><div class="hint">…</div></div>
-
-      <div class="section-title">Daten & Backup</div>
-      <div class="card">
-        <div class="card-sub" style="margin-bottom:12px">${lb ? 'Letztes Backup: ' + U.fmtDate(U.key(new Date(lb)), true) : 'Noch kein Backup erstellt.'}
-          Alle Daten liegen nur auf diesem iPhone. Sichere sie regelmäßig in der Dateien-App oder iCloud Drive.</div>
-        <button class="btn primary block" data-act="backup" style="margin-bottom:10px">${U.icon.share} Backup exportieren</button>
-        <button class="btn block" data-act="restore" style="margin-bottom:10px">${U.icon.import} Backup importieren</button>
-        <button class="btn block" data-act="csv">Als Tabelle exportieren (CSV)</button>
-        <p class="hint">Die Tabellen öffnest du mit Numbers oder Excel. Zum Wiederherstellen brauchst du das Backup.</p>
-        <input type="file" id="restore-file" hidden>
       </div>
-      ${training ? `<div class="card">
+      <div class="card">
+        ${toggle('overload', st.overload !== false, 'Steigerungs-Vorschläge', 'Oberes Ende des Wiederholungsbereichs geschafft → mehr Gewicht, sonst 1 Wiederholung mehr.')}
+        ${toggle('sound', st.sound !== false, 'Ton am Ende der Pause', 'Bei eingeschaltetem Stummschalter nicht hörbar.')}
+      </div>
+      <div class="card">
         <div class="card-title">Aus Hevy übernehmen</div>
         <p class="hint" style="margin:4px 0 12px">In Hevy: Profil → Einstellungen → Daten exportieren → Workouts exportieren. Die CSV-Datei hier auswählen. Deine Workouts werden hinzugefügt, nichts wird überschrieben.</p>
         <button class="btn block" data-act="hevy">Hevy-Datei auswählen</button>
         <input type="file" id="hevy-file" hidden>
-      </div>` : ''}
+      </div>`;
+
+    if (key === 'push') return '<div class="card" id="push-card"><div class="hint">…</div></div>';
+
+    if (key === 'data') return `
+      <div class="card">
+        <div class="card-sub" style="margin-bottom:12px">${lb ? 'Letztes Backup: ' + U.fmtDate(U.key(new Date(lb)), true) + '.' : 'Noch kein Backup erstellt.'}
+          Alle Daten liegen nur auf diesem iPhone. Sichere sie regelmäßig in der Dateien-App oder iCloud Drive.</div>
+        <button class="btn primary block" data-act="backup" style="margin-bottom:10px">${U.icon.share} Backup exportieren</button>
+        <button class="btn block" data-act="restore" style="margin-bottom:10px">${U.icon.import} Backup importieren</button>
+        <button class="btn block" data-act="csv">Als Tabelle exportieren (CSV)</button>
+        <p class="hint">Tabellen öffnest du mit Numbers oder Excel. Zum Wiederherstellen brauchst du das Backup.</p>
+        <input type="file" id="restore-file" hidden>
+      </div>
       <div class="card">
         <div class="card-sub" style="margin-bottom:10px">${S.entries.length} Mahlzeiten-Einträge, ${S.workouts.length} Workouts, ${S.weights.length} Gewichtseinträge, ${S.foods.length} eigene Lebensmittel und Rezepte</div>
         <button class="btn danger block" data-act="wipe">Alle Daten löschen</button>
-      </div>
+      </div>`;
 
-      <div class="section-title">App</div>
+    if (key === 'about') return `
       <div class="list">
         <div class="list-item"><div class="li-main"><div class="li-title">Version</div></div><div class="li-end" id="app-version" style="color:var(--muted)">…</div></div>
         <button class="list-item" data-act="check-update"><div class="li-main"><div class="li-title" style="color:var(--accent)">Nach Updates suchen</div></div></button>
       </div>
-      <p class="hint" style="text-align:center;margin:22px 0 0"><span style="font-family:var(--font-display);font-weight:700;font-size:17px;letter-spacing:-.02em;color:var(--text)">Ferrum</span><br>Ohne Konto, ohne Werbung, ohne Tracking.<br>Lebensmitteldaten online: Open Food Facts (ODbL)</p>
-    `;
-    Settings.drawCalc();
-    Settings.appInfo();
-    Settings.drawPush();
+      <p class="hint" style="text-align:center;margin:14px 0 0">Ferrum – ohne Konto, ohne Werbung, ohne Tracking.<br>Lebensmitteldaten online: Open Food Facts (ODbL)</p>`;
+    return '';
   },
 
   /* ---------- Morgen-Mitteilung (Web-Push) ---------- */
@@ -252,7 +332,7 @@ const Settings = {
         st.cycle[k === 'cycle-train' ? 'train' : 'rest'] = Math.round(x);
       }
       Store.saveKV('settings');
-      if (k === 'cycle-on' || k === 'fast-on') Settings.render();
+      if (k === 'cycle-on' || k === 'fast-on') Settings.render(); else Settings.renderMain();
       App.updateBackupDot();
       return;
     }
@@ -271,6 +351,7 @@ const Settings = {
       const h = $('#macro-hint');
       if (h) h.textContent = `Deine Makros ergeben ${U.n(mk)} kcal${Math.abs(mk - st.kcal) > 50 ? ' – das weicht von deinem Kalorienziel ab.' : '.'}`;
     }
+    Settings.renderMain(); // Zusammenfassungen in der Übersicht aktualisieren
   },
 
   /* ---------- Backup ---------- */
@@ -369,20 +450,23 @@ const Settings = {
     }
   },
 
+  // Änderungen in Eingabefeldern (Hauptseite und geöffnete Bereiche)
+  onChange(e) {
+    if (e.target.dataset.set) Settings.saveField(e.target);
+    if (e.target.id === 'restore-file' && e.target.files[0]) {
+      Settings.importFile(e.target.files[0]);
+      e.target.value = '';
+    }
+    if (e.target.id === 'hevy-file' && e.target.files[0]) {
+      HevyImport.run(e.target.files[0]);
+      e.target.value = '';
+    }
+  },
+
   bind() {
-    const el = $('#view-settings');
-    el.addEventListener('change', e => {
-      if (e.target.dataset.set) Settings.saveField(e.target);
-      if (e.target.id === 'restore-file' && e.target.files[0]) {
-        Settings.importFile(e.target.files[0]);
-        e.target.value = '';
-      }
-      if (e.target.id === 'hevy-file' && e.target.files[0]) {
-        HevyImport.run(e.target.files[0]);
-        e.target.value = '';
-      }
-    });
+    $('#view-settings').addEventListener('change', Settings.onChange);
     Object.assign(App.actions, {
+      'set-open': el => Settings.open(el.dataset.k),
       'backup': () => Settings.exportBackup(),
       'restore': () => $('#restore-file').click(),
       'hevy': () => $('#hevy-file').click(),
@@ -447,12 +531,14 @@ const Settings = {
         $$('[data-act=set-accent]').forEach(b => b.classList.toggle('on', b === btn));
         const a = ACCENTS.find(x => x[0] === btn.dataset.v);
         const n = $('#accent-name'); if (n && a) n.textContent = a[1];
+        Settings.renderMain();
       },
       'set-seg': btn => {
         S.settings[btn.dataset.k] = btn.dataset.v;
         Store.saveKV('settings');
         $$(`[data-act=set-seg][data-k=${btn.dataset.k}]`).forEach(b => b.classList.toggle('on', b === btn));
         Settings.drawCalc();
+        Settings.renderMain();
       },
       'calc-apply': () => {
         const g = calcGoals(S.settings);

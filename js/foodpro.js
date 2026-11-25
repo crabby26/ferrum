@@ -265,13 +265,12 @@ const FoodPro = {
   suggestCard(day) {
     const s = FoodPro.suggestions(day);
     if (!s || !s.list.length) return '';
-    return `<div class="card sug-card">
-      <div class="card-title">Was fehlt noch?</div>
-      <div class="hint" style="margin:2px 0 10px">Noch ${U.n(s.needP)} g Protein bei ${U.n(s.leftK)} kcal übrig. So würde es passen:</div>
-      ${s.list.map(x => `<div class="sug-row">
-        <div class="li-main"><div class="li-title">${U.esc(x.f.name)}</div><div class="li-sub">${U.n(x.grams)} ${Nutri.unitOf(x.f)}: +${U.n(x.p)} g Protein, ${U.n(x.kcal)} kcal</div></div>
-        <button class="add-pill" data-act="sug-add" data-id="${U.esc(x.f.id)}" data-g="${x.grams}" data-day="${day}" aria-label="${U.esc(x.f.name)} eintragen">${U.icon.plus}<span>${U.n(x.grams)} ${Nutri.unitOf(x.f)}</span></button>
-      </div>`).join('')}
+    return `<div class="quick-row sug-row-compact">
+      <div class="quick-title">Noch <b>${U.n(s.needP)} g Protein</b> offen. Passt dazu:</div>
+      <div class="chips">${s.list.map(x => `<button class="quick-chip sug-chip" data-act="sug-add" data-id="${U.esc(x.f.id)}" data-g="${x.grams}" data-day="${day}" aria-label="${U.esc(x.f.name)}, ${U.n(x.grams)} ${Nutri.unitOf(x.f)} eintragen">
+          <span class="qc-plus">${U.icon.plus}</span><span class="qc-name">${U.esc(x.f.name)}</span>
+          <span class="qc-amt">${U.n(x.grams)} ${Nutri.unitOf(x.f)}, +${U.n(x.p)} g P</span>
+        </button>`).join('')}</div>
     </div>`;
   },
   findFood(id) {
