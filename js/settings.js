@@ -27,7 +27,12 @@ const ACCENTS = [
   ['indigo', 'Indigo', '#5E5CE6'],
   ['purple', 'Lila', '#BF5AF2'],
   ['mint', 'Mint', '#63E6E2'],
-  ['graphite', 'Graphit', '#E5E5EA']
+  ['graphite', 'Graphit', '#E5E5EA'],
+  // Verläufe
+  ['aurora', 'Aurora (Türkis zu Violett)', 'linear-gradient(135deg, #2EE6C9, #7B61FF)'],
+  ['ocean', 'Ozean (Tiefblau zu Hellblau)', 'linear-gradient(135deg, #1E5BFF, #5AC8FA)'],
+  ['nebula', 'Nebula (Violett zu Magenta)', 'linear-gradient(135deg, #7B61FF, #E040FB)'],
+  ['titan', 'Titan (Silber-Metallic)', 'linear-gradient(135deg, #F5F5F7, #8E8E93)']
 ];
 
 const Settings = {
@@ -57,7 +62,7 @@ const Settings = {
     const foodSub = [st.fast && st.fast.on ? `Fasten ${st.fast.hours || 16}:${24 - (st.fast.hours || 16)}` : '', training && st.cycle && st.cycle.on ? `Trainingstage +${st.cycle.train} kcal` : ''].filter(Boolean).join(', ') || 'Fasten, Trainingstage';
     return [
       { key: 'mode', title: 'Was du trackst', color: '#5E5CE6', sub: (MODES.find(m => m[0] === App.mode()) || MODES[0])[1], show: true, group: 1 },
-      { key: 'look', title: 'Darstellung', color: accent[2], sub: accent[1] + (st.haptics !== false ? ', Haptik an' : ''), show: true, group: 1 },
+      { key: 'look', title: 'Darstellung', color: accent[2], sub: accent[1].split(' (')[0] + (st.haptics !== false ? ', Haptik an' : ''), show: true, group: 1 },
       { key: 'goals', title: 'Tagesziele', color: '#FF375F', sub: `${U.n(st.kcal)} kcal, ${st.protein} g Protein`, show: food, group: 2 },
       { key: 'food', title: 'Ernährung', color: '#30D158', sub: foodSub, show: food, group: 2 },
       { key: 'calc', title: 'Ziel-Rechner', color: '#FF9F0A', sub: `${st.height} cm, ${U.n(st.weight, 1)} kg, ${(GOALS.find(g => g[0] === st.goal) || GOALS[0])[1]}`, show: food, group: 2 },

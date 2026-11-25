@@ -92,7 +92,7 @@ const App = {
     const rest = st.kcal - t.kcal;
     const over = t.kcal > st.kcal * 1.05;
 
-    const big = U.ring(212, 20, t.kcal / st.kcal, over ? 'var(--over)' : 'var(--accent)', `
+    const big = U.ring(212, 20, t.kcal / st.kcal, over ? 'var(--over)' : 'url(#acc-grad)', `
       <div class="v" data-count="${Math.round(Math.abs(rest))}">${U.n(Math.abs(rest))}</div>
       <div class="l">${rest >= 0 ? 'kcal übrig' : 'kcal über Ziel'}</div>
       <div class="s">${U.n(t.kcal)} von ${U.n(st.kcal)}</div>

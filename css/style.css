@@ -1415,3 +1415,42 @@ body::before { background: radial-gradient(90% 35% at 50% -10%, rgba(255, 255, 2
 /* Einstellungen: dezentere Symbole */
 .set-icon { box-shadow: none; }
 .profile-card img { box-shadow: none; }
+
+/* =========================================================
+   Akzentfarben mit Verlauf (Ferrum 6.4)
+   --accent      einfarbig (Text, Symbole, Diagramme)
+   --acc-a/-b    Verlaufsfarben (Kalorienring, Knöpfe)
+   ========================================================= */
+:root {
+  --acc-a: var(--accent);
+  --acc-b: var(--accent);
+  --accent-fill: linear-gradient(135deg, var(--acc-a), var(--acc-b));
+}
+html[data-accent="aurora"] {
+  --accent: #4FC9E8; --accent-2: #7BE0F0; --accent-soft: rgba(79, 201, 232, .16); --ink: #FFFFFF;
+  --acc-a: #2EE6C9; --acc-b: #7B61FF;
+}
+html[data-accent="ocean"] {
+  --accent: #3D8BFF; --accent-2: #6AA8FF; --accent-soft: rgba(61, 139, 255, .18); --ink: #FFFFFF;
+  --acc-a: #1E5BFF; --acc-b: #5AC8FA;
+}
+html[data-accent="nebula"] {
+  --accent: #A66BFF; --accent-2: #C394FF; --accent-soft: rgba(166, 107, 255, .18); --ink: #FFFFFF;
+  --acc-a: #7B61FF; --acc-b: #E040FB;
+}
+html[data-accent="titan"] {
+  --accent: #D1D1D6; --accent-2: #F2F2F7; --accent-soft: rgba(209, 209, 214, .12); --ink: #000000;
+  --acc-a: #F5F5F7; --acc-b: #8E8E93;
+}
+
+/* Verlauf auf den hervorgehobenen Elementen */
+.btn.primary, .chip.on, .sheet-body .chip.on, .icon-btn.accent, .workout-pill, .toast.ok, .pr-pop {
+  background: var(--accent-fill);
+  color: var(--ink);
+}
+.btn.primary:active { filter: brightness(1.08); background: var(--accent-fill); }
+.rest-progress i { background: var(--accent-fill); }
+.pr-badge { background: var(--accent-fill); color: var(--ink); }
+.tab.active { color: var(--accent); }
+.accent-dots { gap: 14px; }
+.accent-dot { width: 42px; height: 42px; }
